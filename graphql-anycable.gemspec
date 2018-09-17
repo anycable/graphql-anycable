@@ -26,8 +26,9 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "anycable", "~> 0.5"
-  spec.add_dependency "graphql",  "~> 1.8"
+  spec.add_dependency "anycable",      "~> 0.5"
+  spec.add_dependency "anyway_config", "~> 1.3"
+  spec.add_dependency "graphql",       "~> 1.8"
 
   spec.add_development_dependency "bundler", "~> 1.16"
   spec.add_development_dependency "fakeredis"

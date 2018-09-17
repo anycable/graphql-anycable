@@ -53,6 +53,7 @@ module GraphQL
   class Subscriptions
     class AnyCableSubscriptions < GraphQL::Subscriptions
       SUBSCRIPTION_PREFIX = "graphql-subscription:"
+      SUBSCRIPTION_EVENTS_PREFIX = "graphql-subscription-events:"
       EVENT_PREFIX = "graphql-event:"
       CHANNEL_PREFIX = "graphql-channel:"
 
@@ -66,6 +67,7 @@ module GraphQL
       # Re-evaluate all subscribed queries and push the data over ActionCable.
       def execute_all(event, object)
         redis.smembers(EVENT_PREFIX + event.topic).each do |subscription_id|
+          next unless redis.exists(SUBSCRIPTION_PREFIX + subscription_id)
           execute(subscription_id, event, object)
         end
       end
@@ -90,15 +92,18 @@ module GraphQL
           variables: query.provided_variables.to_json,
           context: @serializer.dump(context.to_h),
           operation_name: query.operation_name,
-          events: events.map(&:topic).to_json,
         }
 
         redis.multi do
           redis.sadd(CHANNEL_PREFIX + channel.params["channelId"], subscription_id)
           redis.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, data)
+          redis.sadd(SUBSCRIPTION_EVENTS_PREFIX + subscription_id, *events.map(&:topic))
           events.each do |event|
             redis.sadd(EVENT_PREFIX + event.topic, subscription_id)
           end
+          next unless config.subscription_expiration_seconds
+          redis.expire(CHANNEL_PREFIX + channel.params["channelId"], config.subscription_expiration_seconds)
+          redis.expire(SUBSCRIPTION_PREFIX + subscription_id, config.subscription_expiration_seconds)
         end
       end
 
@@ -116,11 +121,12 @@ module GraphQL
       # The channel was closed, forget about it.
       def delete_subscription(subscription_id)
         # Remove subscription ids from all events
-        events_data = redis.hget(SUBSCRIPTION_PREFIX + subscription_id, :events)
-        events_data && JSON.parse(events_data).each do |event_topic|
+        events = redis.smembers(SUBSCRIPTION_EVENTS_PREFIX + subscription_id)
+        events.each do |event_topic|
           redis.srem(EVENT_PREFIX + event_topic, subscription_id)
         end
         # Delete subscription itself
+        redis.del(SUBSCRIPTION_EVENTS_PREFIX + subscription_id)
         redis.del(SUBSCRIPTION_PREFIX + subscription_id)
       end
 
@@ -139,6 +145,10 @@ module GraphQL
 
       def redis
         @redis ||= anycable.redis_conn
+      end
+
+      def config
+        @config ||= Graphql::Anycable::Config.new
       end
     end
   end

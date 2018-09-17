@@ -1,0 +1,5 @@
+# frozen_string_literal: true
+
+require "graphql-anycable"
+
+Dir.glob("#{File.expand_path(__dir__)}/tasks/**/*.rake").each { |f| import f }

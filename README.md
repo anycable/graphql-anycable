@@ -97,6 +97,13 @@ Or install it yourself as:
     MySchema.subscriptions.trigger(:product_updated, {}, Product.first!, scope: account.id)
     ```
 
+## Operations
+
+To avoid filling Redis storage with stale subscription data:
+
+ 1. Set `GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS` environment variable to number of seconds (e.g. `604800` for 1 week). See [anyway_config] documentation to other ways of configuring this gem.
+ 2. Execute `rake graphql:anycable:clean_expired_subscriptions` once in a while to clean up stale subscription data
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
@@ -114,3 +121,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 [graphql gem]: https://github.com/rmosolgo/graphql-ruby "Ruby implementation of GraphQL"
 [AnyCable]: https://github.com/anycable/anycable "Polyglot replacement for Ruby WebSocket servers with Action Cable protocol"
 [LiteCable]: https://github.com/palkan/litecable "Lightweight Action Cable implementation (Rails-free)"
+[anyway_config]: https://github.com/palkan/anyway_config "Ruby libraries and applications configuration on steroids!"
