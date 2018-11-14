@@ -2,8 +2,6 @@
 
 A (mostly) drop-in replacement for default ActionCable subscriptions adapter shipped with [graphql gem] but works with [AnyCable]!
 
-**IMPORTANT**: This gem is still in _proof of concept_ stage. It is not yet tested in production and everything may change without any notice. You have warned. 
-
 [![Gem Version](https://badge.fury.io/rb/graphql-anycable.svg)](https://badge.fury.io/rb/graphql-anycable)
 
 <a href="https://evilmartians.com/?utm_source=graphql-anycable&utm_campaign=project_page">
@@ -18,7 +16,7 @@ See https://github.com/anycable/anycable-rails/issues/40 for more details and di
 
 ## Differences
 
- - Subscription information is stored in Redis database configured to be used by AnyCable. No expiration or data cleanup yet.
+ - Subscription information is stored in Redis database configured to be used by AnyCable. Expiration or data cleanup should be configured separately (see below).
  - GraphQL queries for all subscriptions are re-executed in the process that triggers event (it may be web server, async jobs, rake tasks or whatever)
 
 ## Compatibility
