@@ -2,7 +2,7 @@
 
 require "rails"
 
-module Graphql
+module GraphQL
   module Anycable
     class Railtie < ::Rails::Railtie
       rake_tasks do

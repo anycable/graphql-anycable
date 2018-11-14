@@ -14,11 +14,7 @@ RSpec.describe Graphql::Anycable do
     double
   end
 
-  before(:all) do
-    @anycable ||= Anycable::PubSub.new
-  end
-
-  let(:anycable) { @anycable }
+  let(:anycable) { AnyCable.broadcast_adapter }
 
   let(:subscription_id) do
     "some-truly-random-number"
@@ -27,7 +23,6 @@ RSpec.describe Graphql::Anycable do
   before do
     allow(channel).to receive(:stream_from)
     allow(channel).to receive(:params).and_return("channelId" => "ohmycables")
-    allow(Anycable::PubSub).to(receive(:new).and_return(@anycable))
     allow(anycable).to receive(:broadcast)
   end
 

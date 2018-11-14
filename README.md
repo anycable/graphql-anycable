@@ -24,6 +24,10 @@ See https://github.com/anycable/anycable-rails/issues/40 for more details and di
  - Should work with ActionCable in development
  - Should work without Rails via [LiteCable] 
 
+## Requirements
+
+AnyCable must be configured with redis broadcast adapter (this is default).
+
 ## Installation
 
 Add this line to your application's Gemfile:

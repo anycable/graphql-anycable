@@ -52,6 +52,10 @@ require "graphql/subscriptions"
 module GraphQL
   class Subscriptions
     class AnyCableSubscriptions < GraphQL::Subscriptions
+      extend Forwardable
+
+      def_delegators :"GraphQL::Anycable", :redis
+
       SUBSCRIPTION_PREFIX = "graphql-subscription:"
       SUBSCRIPTION_EVENTS_PREFIX = "graphql-subscription-events:"
       EVENT_PREFIX = "graphql-event:"
@@ -140,15 +144,11 @@ module GraphQL
       private
 
       def anycable
-        @pub_sub ||= Anycable::PubSub.new
-      end
-
-      def redis
-        @redis ||= anycable.redis_conn
+        @anycable ||= ::Anycable.broadcast_adapter
       end
 
       def config
-        @config ||= Graphql::Anycable::Config.new
+        @config ||= GraphQL::Anycable::Config.new
       end
     end
   end

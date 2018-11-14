@@ -2,7 +2,7 @@
 
 require "anyway"
 
-module Graphql
+module GraphQL
   module Anycable
     class Config < Anyway::Config
       config_name :graphql_anycable

@@ -1,15 +1,17 @@
+require "graphql-anycable"
+
 # frozen_string_literal: true
 
 namespace :graphql do
   namespace :anycable do
     task :clean_expired_subscriptions do
-      config = Graphql::Anycable::Config.new
+      config = GraphQL::Anycable::Config.new
       unless config.subscription_expiration_seconds
         warn "GraphQL::Anycable: No expiration set for subscriptions!"
         next
       end
 
-      redis = Anycable::PubSub.new.redis_conn
+      redis = GraphQL::Anycable.redis
       klass = GraphQL::Subscriptions::AnyCableSubscriptions
 
       # 1. Clean up old channels
