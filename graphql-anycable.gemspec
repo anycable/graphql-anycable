@@ -6,7 +6,7 @@ require "graphql/anycable/version"
 
 Gem::Specification.new do |spec|
   spec.name          = "graphql-anycable"
-  spec.version       = Graphql::Anycable::VERSION
+  spec.version       = GraphQL::Anycable::VERSION
   spec.authors       = ["Andrey Novikov"]
   spec.email         = ["envek@envek.name"]
 
@@ -26,7 +26,7 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "anycable",      "~> 0.6.0.rc1"
+  spec.add_dependency "anycable",      "~> 0.6.0"
   spec.add_dependency "anyway_config", "~> 1.3"
   spec.add_dependency "graphql",       "~> 1.8"
 

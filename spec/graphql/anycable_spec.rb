@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Graphql::Anycable do
+RSpec.describe GraphQL::Anycable do
   subject do
     AnycableSchema.execute(
       query: "subscription ProductUpdated { productUpdated { id } }",
