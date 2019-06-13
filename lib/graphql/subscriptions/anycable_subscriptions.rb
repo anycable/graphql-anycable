@@ -119,6 +119,7 @@ module GraphQL
         ).tap do |subscription|
           subscription[:context]   = @serializer.load(subscription[:context])
           subscription[:variables] = JSON.parse(subscription[:variables])
+          subscription[:operation_name] = nil if subscription[:operation_name].strip == ""
         end
       end
 
