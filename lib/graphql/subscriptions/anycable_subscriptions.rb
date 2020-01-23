@@ -51,6 +51,25 @@ require "graphql/subscriptions"
 #
 module GraphQL
   class Subscriptions
+    class AnyCableInstrumentation < GraphQL::Subscriptions::Instrumentation
+      def before_query(query)
+        if query.subscription? && !query.subscription_update?
+          events = []
+          ctx = query.context          
+          query_node_field = query.selected_operation.selections.each do |query_node_field|
+            event_name = query_node_field.name
+            field = query.get_field(@schema.subscription, event_name) # i.e. 'userCreated'
+            events << Subscriptions::Event.new(
+              field: field,
+              name: field.name,
+              arguments: field.arguments,
+              context: ctx,
+            )
+          end
+          ctx.namespace(:subscriptions)[:events] = events
+        end
+      end
+    end
     class AnyCableSubscriptions < GraphQL::Subscriptions
       extend Forwardable
 
@@ -60,6 +79,21 @@ module GraphQL
       SUBSCRIPTION_EVENTS_PREFIX = "graphql-subscription-events:"
       EVENT_PREFIX = "graphql-event:"
       CHANNEL_PREFIX = "graphql-channel:"
+
+      def self.use(defn, options = {})
+        schema = defn.is_a?(Class) ? defn : defn.target
+  
+        if schema.subscriptions
+          raise ArgumentError, "Can't reinstall subscriptions. #{schema} is using #{schema.subscriptions}, can't also add #{self}"
+        end
+  
+        instrumentation = Subscriptions::AnyCableInstrumentation.new(schema: schema)
+        defn.instrument(:query, instrumentation)
+        # defn.instrument(:field, instrumentation)
+        options[:schema] = schema
+        schema.subscriptions = self.new(**options)
+        nil
+      end
 
       # @param serializer [<#dump(obj), #load(string)] Used for serializing messages before handing them to `.broadcast(msg)`
       def initialize(serializer: Serialize, **rest)
