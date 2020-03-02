@@ -104,7 +104,10 @@ Or install it yourself as:
 To avoid filling Redis storage with stale subscription data:
 
  1. Set `GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS` environment variable to number of seconds (e.g. `604800` for 1 week). See [anyway_config] documentation to other ways of configuring this gem.
- 2. Execute `rake graphql:anycable:clean_expired_subscriptions` once in a while to clean up stale subscription data
+
+ 2. Execute `rake graphql:anycable:clean` once in a while to clean up stale subscription data.
+
+    Heroku users should set up `GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP` environment variable to `false` due to [limitations in Heroku Redis](https://devcenter.heroku.com/articles/heroku-redis#connection-permissions).
 
 ## Development
 
