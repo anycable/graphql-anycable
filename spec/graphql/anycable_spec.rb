@@ -3,11 +3,23 @@
 RSpec.describe GraphQL::Anycable do
   subject do
     AnycableSchema.execute(
-      query: "subscription ProductUpdated { productUpdated { id } }",
+      query: query,
       context: { channel: channel, subscription_id: subscription_id },
       variables: {},
-      operation_name: "ProductUpdated",
+      operation_name: "SomeSubscription",
     )
+  end
+
+  let(:query) do
+    <<~GRAPHQL
+      subscription SomeSubscription { productUpdated { id } }
+    GRAPHQL
+  end
+
+  let(:expected_result) do
+    <<~JSON.strip
+      {"result":{"data":{"productUpdated":{"id":"1"}}},"more":true}
+    JSON
   end
 
   let(:channel) do
@@ -34,6 +46,40 @@ RSpec.describe GraphQL::Anycable do
   it "broadcasts message when event is being triggered" do
     subject
     AnycableSchema.subscriptions.trigger(:product_updated, {}, { id: 1, title: "foo" })
-    expect(anycable).to have_received(:broadcast).with("graphql-subscription:#{subscription_id}", "{\"result\":{\"data\":{\"productUpdated\":{\"id\":\"1\"}}},\"more\":true}")
+    expect(anycable).to have_received(:broadcast).with("graphql-subscription:#{subscription_id}", expected_result)
+  end
+
+  context "with multiple subscriptions in one query" do
+    let(:query) do
+      <<~GRAPHQL
+        subscription SomeSubscription {
+          productCreated { id title }
+          productUpdated { id }
+        }
+      GRAPHQL
+    end
+
+    context "triggering update event" do
+      it "broadcasts message only for update event" do
+        subject
+        AnycableSchema.subscriptions.trigger(:product_updated, {}, { id: 1, title: "foo" })
+        expect(anycable).to have_received(:broadcast).with("graphql-subscription:#{subscription_id}", expected_result)
+      end
+    end
+
+    context "triggering create event" do
+      let(:expected_result) do
+        <<~JSON.strip
+          {"result":{"data":{"productCreated":{"id":"1","title":"Gravizapa"}}},"more":true}
+        JSON
+      end
+
+      it "broadcasts message only for create event" do
+        subject
+        AnycableSchema.subscriptions.trigger(:product_created, {}, { id: 1, title: "Gravizapa" })
+
+        expect(anycable).to have_received(:broadcast).with("graphql-subscription:#{subscription_id}", expected_result)
+      end
+    end
   end
 end

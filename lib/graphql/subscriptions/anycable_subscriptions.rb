@@ -101,7 +101,7 @@ module GraphQL
         redis.multi do
           redis.sadd(CHANNEL_PREFIX + channel.params["channelId"], subscription_id)
           redis.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, data)
-          redis.sadd(SUBSCRIPTION_EVENTS_PREFIX + subscription_id, *events.map(&:topic))
+          redis.sadd(SUBSCRIPTION_EVENTS_PREFIX + subscription_id, events.map(&:topic))
           events.each do |event|
             redis.sadd(EVENT_PREFIX + event.topic, subscription_id)
           end

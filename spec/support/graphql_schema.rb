@@ -6,9 +6,11 @@ class Product < GraphQL::Schema::Object
 end
 
 class SubscriptionType < GraphQL::Schema::Object
+  field :product_created, Product, null: false
   field :product_updated, Product, null: false
 
   # See https://github.com/rmosolgo/graphql-ruby/issues/1567
+  def product_created; end
   def product_updated; end
 end
 
