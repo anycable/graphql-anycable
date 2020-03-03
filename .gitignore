@@ -8,5 +8,4 @@
 /tmp/
 Gemfile.lock
 .rspec_status
-
-
+/gemfiles/*.lock
