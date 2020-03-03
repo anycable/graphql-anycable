@@ -11,3 +11,9 @@ gemfile:
   - gemfiles/graphql_1.9.gemfile
   - gemfiles/graphql_1.10.gemfile
 before_install: gem install bundler -v "~> 2.0"
+
+matrix:
+  exclude:
+    # grpc gem isn't ready for ruby 2.7 yet: https://github.com/grpc/grpc/issues/21514
+    # goole-protobuf gem isn't ready for ruby 2.7 yet: https://github.com/protocolbuffers/protobuf/issues/7070
+    - rvm: 2.7.0
