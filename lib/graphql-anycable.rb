@@ -13,12 +13,12 @@ module GraphQL
 
     def redis
       @redis ||= begin
-        adapter = ::Anycable.broadcast_adapter
+        adapter = ::AnyCable.broadcast_adapter
         unless adapter.is_a?(::AnyCable::BroadcastAdapters::Redis)
           raise "Unsupported AnyCable adapter: #{adapter.class}. " \
                   "graphql-anycable works only with redis broadcast adapter."
         end
-        ::Anycable.broadcast_adapter.redis_conn
+        ::AnyCable.broadcast_adapter.redis_conn
       end
     end
   end
