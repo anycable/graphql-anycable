@@ -5,3 +5,11 @@ end
 appraise "graphql-1.10" do
   gem "graphql", "~> 1.10.0"
 end
+
+appraise "anycable-0.6" do
+  gem "anycable", "~> 0.6.0"
+end
+
+appraise "anycable-1.0" do
+  gem "anycable", "~> 1.0.0.preview1"
+end

@@ -10,6 +10,8 @@ rvm:
 gemfile:
   - gemfiles/graphql_1.9.gemfile
   - gemfiles/graphql_1.10.gemfile
+  - gemfiles/anycable_0.6.gemfile
+  - gemfiles/anycable_1.0.gemfile
 before_install: gem install bundler -v "~> 2.0"
 
 matrix:
@@ -17,3 +19,17 @@ matrix:
     # grpc gem isn't ready for ruby 2.7 yet: https://github.com/grpc/grpc/issues/21514
     # goole-protobuf gem isn't ready for ruby 2.7 yet: https://github.com/protocolbuffers/protobuf/issues/7070
     - rvm: 2.7.0
+    # Exclude new dependencies on old rubies to run less jobs
+    - rvm: 2.4.9
+      gemfile: gemfiles/anycable_1.0.gemfile
+    - rvm: 2.4.9
+      gemfile: gemfiles/graphql_1.10.gemfile
+    - rvm: 2.5.7
+      gemfile: gemfiles/anycable_1.0.gemfile
+    - rvm: 2.5.7
+      gemfile: gemfiles/graphql_1.10.gemfile
+    # Exclude old dependencies on new rubies to run less jobs
+    - rvm: 2.6.5
+      gemfile: gemfiles/anycable_0.6.gemfile
+    - rvm: 2.6.5
+      gemfile: gemfiles/graphql_1.9.gemfile
