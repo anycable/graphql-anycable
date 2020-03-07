@@ -145,7 +145,7 @@ module GraphQL
       private
 
       def anycable
-        @anycable ||= ::Anycable.broadcast_adapter
+        @anycable ||= ::AnyCable.broadcast_adapter
       end
 
       def config
