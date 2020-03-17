@@ -54,7 +54,7 @@ module GraphQL
     class AnyCableSubscriptions < GraphQL::Subscriptions
       extend Forwardable
 
-      def_delegators :"GraphQL::Anycable", :redis
+      def_delegators :"GraphQL::Anycable", :redis, :config
 
       SUBSCRIPTION_PREFIX = "graphql-subscription:"
       SUBSCRIPTION_EVENTS_PREFIX = "graphql-subscription-events:"
@@ -79,7 +79,7 @@ module GraphQL
       # This subscription was re-evaluated.
       # Send it to the specific stream where this client was waiting.
       def deliver(subscription_id, result)
-        payload = { result: result.to_h, more: true }
+        payload = {result: result.to_h, more: true}
         anycable.broadcast(SUBSCRIPTION_PREFIX + subscription_id, payload.to_json)
       end
 
@@ -95,7 +95,7 @@ module GraphQL
           query_string: query.query_string,
           variables: query.provided_variables.to_json,
           context: @serializer.dump(context.to_h),
-          operation_name: query.operation_name,
+          operation_name: query.operation_name
         }
 
         redis.multi do
@@ -115,9 +115,9 @@ module GraphQL
       def read_subscription(subscription_id)
         redis.mapped_hmget(
           "#{SUBSCRIPTION_PREFIX}#{subscription_id}",
-          :query_string, :variables, :context, :operation_name,
+          :query_string, :variables, :context, :operation_name
         ).tap do |subscription|
-          subscription[:context]   = @serializer.load(subscription[:context])
+          subscription[:context] = @serializer.load(subscription[:context])
           subscription[:variables] = JSON.parse(subscription[:variables])
           subscription[:operation_name] = nil if subscription[:operation_name].strip == ""
         end
@@ -146,10 +146,6 @@ module GraphQL
 
       def anycable
         @anycable ||= ::AnyCable.broadcast_adapter
-      end
-
-      def config
-        @config ||= GraphQL::Anycable::Config.new
       end
     end
   end

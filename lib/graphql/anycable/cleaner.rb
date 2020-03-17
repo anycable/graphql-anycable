@@ -5,31 +5,31 @@ module GraphQL
     module Cleaner
       extend self
 
-      def clean(subscription_expiration_seconds, use_redis_object_on_cleanup: true)
-        clean_channels(subscription_expiration_seconds, use_redis_object_on_cleanup: use_redis_object_on_cleanup)
-        clean_subscriptions(subscription_expiration_seconds, use_redis_object_on_cleanup: use_redis_object_on_cleanup)
+      def clean
+        clean_channels
+        clean_subscriptions
         clean_events
       end
 
-      def clean_channels(subscription_expiration_seconds, use_redis_object_on_cleanup: true)
-        return unless subscription_expiration_seconds
-        return unless use_redis_object_on_cleanup
+      def clean_channels
+        return unless config.subscription_expiration_seconds
+        return unless config.use_redis_object_on_cleanup
 
         redis.scan_each(match: "#{adapter::CHANNEL_PREFIX}*") do |key|
           idle = redis.object("IDLETIME", key)
-          next if idle&.<= subscription_expiration_seconds
+          next if idle&.<= config.subscription_expiration_seconds
 
           redis.del(key)
         end
       end
 
-      def clean_subscriptions(subscription_expiration_seconds, use_redis_object_on_cleanup: true)
-        return unless subscription_expiration_seconds
-        return unless use_redis_object_on_cleanup
+      def clean_subscriptions
+        return unless config.subscription_expiration_seconds
+        return unless config.use_redis_object_on_cleanup
 
         redis.scan_each(match: "#{adapter::SUBSCRIPTION_PREFIX}*") do |key|
           idle = redis.object("IDLETIME", key)
-          next if idle&.<= subscription_expiration_seconds
+          next if idle&.<= config.subscription_expiration_seconds
 
           redis.del(key)
         end
@@ -56,6 +56,10 @@ module GraphQL
 
       def redis
         GraphQL::Anycable.redis
+      end
+
+      def config
+        GraphQL::Anycable.config
       end
     end
   end
