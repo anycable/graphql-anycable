@@ -22,5 +22,13 @@ module GraphQL
         ::AnyCable.broadcast_adapter.redis_conn
       end
     end
+
+    def config
+      @config ||= GraphQL::Anycable::Config.new
+    end
+
+    def configure
+      yield(config) if block_given?
+    end
   end
 end
