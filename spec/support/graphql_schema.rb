@@ -6,16 +6,27 @@ class Product < GraphQL::Schema::Object
 end
 
 class SubscriptionType < GraphQL::Schema::Object
-  field :product_created, Product, null: false
-  field :product_updated, Product, null: false
+  if TESTING_GRAPHQL_RUBY_INTERPRETER
+    extend GraphQL::Subscriptions::SubscriptionRoot
+  end
 
-  # See https://github.com/rmosolgo/graphql-ruby/issues/1567
-  def product_created; end
-  def product_updated; end
+  field :product_created, Product, null: false, resolver_method: :default_resolver
+  field :product_updated, Product, null: false, resolver_method: :default_resolver
+
+  def default_resolver
+    return object if context.query.subscription_update?
+
+    context.skip
+  end
 end
 
 class AnycableSchema < GraphQL::Schema
   use GraphQL::Subscriptions::AnyCableSubscriptions
+
+  if TESTING_GRAPHQL_RUBY_INTERPRETER
+    use GraphQL::Execution::Interpreter
+    use GraphQL::Analysis::AST
+  end
 
   subscription SubscriptionType
 end

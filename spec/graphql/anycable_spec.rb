@@ -61,10 +61,6 @@ RSpec.describe GraphQL::Anycable do
 
     context "triggering update event" do
       it "broadcasts message only for update event" do
-        if Gem::Requirement.new("~> 1.10.0") =~ Gem::Version.new(GraphQL::VERSION)
-          pending "Known GraphQL-Ruby bug: https://github.com/rmosolgo/graphql-ruby/issues/2795"
-        end
-
         subject
         AnycableSchema.subscriptions.trigger(:product_updated, {}, { id: 1, title: "foo" })
         expect(anycable).to have_received(:broadcast).with("graphql-subscription:#{subscription_id}", expected_result)

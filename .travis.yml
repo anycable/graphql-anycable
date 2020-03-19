@@ -12,6 +12,9 @@ gemfile:
   - gemfiles/graphql_1.10.gemfile
   - gemfiles/anycable_0.6.gemfile
   - gemfiles/anycable_1.0.gemfile
+env:
+  - GRAPHQL_RUBY_INTERPRETER=yes
+  - GRAPHQL_RUBY_INTERPRETER=no
 before_install: gem install bundler -v "~> 2.0"
 
 matrix:
