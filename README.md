@@ -103,11 +103,41 @@ Or install it yourself as:
 
 To avoid filling Redis storage with stale subscription data:
 
- 1. Set `GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS` environment variable to number of seconds (e.g. `604800` for 1 week). See [anyway_config] documentation to other ways of configuring this gem.
+ 1. Set `subscription_expiration_seconds` setting to number of seconds (e.g. `604800` for 1 week). See [configuration](#Configuration) section below for details.
 
  2. Execute `rake graphql:anycable:clean` once in a while to clean up stale subscription data.
 
-    Heroku users should set up `GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP` environment variable to `false` due to [limitations in Heroku Redis](https://devcenter.heroku.com/articles/heroku-redis#connection-permissions).
+    Heroku users should set up `use_redis_object_on_cleanup` setting to `false` due to [limitations in Heroku Redis](https://devcenter.heroku.com/articles/heroku-redis#connection-permissions).
+
+## Configuration
+
+GraphQL-Anycable uses [anyway_config] to configure itself. There are several possibilities to configure this gem:
+
+ 1. Environment variables:
+
+    ```.env
+    GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS=604800
+    GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP=true
+    ```
+
+ 2. YAML configuration files:
+
+    ```yaml
+    # config/graphql_anycable.yml
+    production:
+      subscription_expiration_seconds: 300 # 5 minutes
+      use_redis_object_on_cleanup: false # For restricted redis installations
+    ```
+
+ 3. Configuration from your application code:
+
+    ```ruby
+    GraphQL::Anycable.configure do |config|
+      config.subscription_expiration_seconds = 3600 # 1 hour
+    end
+    ```
+
+And any other way provided by [anyway_config]. Check its documentation!
 
 ## Development
 
