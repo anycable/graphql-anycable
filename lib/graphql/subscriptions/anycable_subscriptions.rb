@@ -71,7 +71,7 @@ module GraphQL
       # Re-evaluate all subscribed queries and push the data over ActionCable.
       def execute_all(event, object)
         redis.smembers(EVENT_PREFIX + event.topic).each do |subscription_id|
-          next unless redis.exists(SUBSCRIPTION_PREFIX + subscription_id)
+          next unless redis.exists?(SUBSCRIPTION_PREFIX + subscription_id)
           execute(subscription_id, event, object)
         end
       end

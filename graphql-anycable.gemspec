@@ -29,6 +29,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "anycable",      ">= 0.6.0", "< 2"
   spec.add_dependency "anyway_config", ">= 1.3", "< 3"
   spec.add_dependency "graphql",       "~> 1.8"
+  spec.add_dependency "redis",         ">= 4.2.0"
 
   spec.add_development_dependency "bundler", "~> 2.0"
   spec.add_development_dependency "fakeredis"

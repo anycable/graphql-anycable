@@ -38,7 +38,7 @@ module GraphQL
       def clean_events
         redis.scan_each(match: "#{adapter::SUBSCRIPTION_EVENTS_PREFIX}*") do |key|
           subscription_id = key.sub(/\A#{adapter::SUBSCRIPTION_EVENTS_PREFIX}/, "")
-          next if redis.exists(adapter::SUBSCRIPTION_PREFIX + subscription_id)
+          next if redis.exists?(adapter::SUBSCRIPTION_PREFIX + subscription_id)
 
           redis.smembers(key).each do |event_topic|
             redis.srem(adapter::EVENT_PREFIX + event_topic, subscription_id)

@@ -13,4 +13,7 @@ group :development, :test do
 
   gem "rubocop"
   gem "rubocop-rspec"
+
+  # See https://github.com/guilleiguaran/fakeredis/pull/247
+  gem "fakeredis", github: 'artygus/fakeredis', branch: 'exists-should-return-number'
 end

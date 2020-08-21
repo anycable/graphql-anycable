@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.4.1 - 2020-08-21
+
+### Fixed
+
+ - Deprecation warning for `Redis#exist` usage on Redis Ruby client 4.2+. Switch to `exists?` method and require Redis 4.2+ (see [#14](https://github.com/anycable/graphql-anycable/issues/14)). [@Envek]
+
 ## 0.4.0 - 2020-03-19
 
 ### Added
