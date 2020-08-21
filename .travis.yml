@@ -1,34 +1,25 @@
 ---
 language: ruby
 cache: bundler
-rvm:
-  - 2.7.1
-  - 2.6.6
-  - 2.5.8
-gemfile:
-  - gemfiles/graphql_1.9.gemfile
-  - gemfiles/graphql_1.10.gemfile
-  - gemfiles/graphql_1.11.gemfile
-  - gemfiles/anycable_0.6.gemfile
-  - gemfiles/anycable_1.0.gemfile
-env:
-  - GRAPHQL_RUBY_INTERPRETER=yes
-  - GRAPHQL_RUBY_INTERPRETER=no
 before_install: gem install bundler -v "~> 2.0"
 
 jobs:
-  exclude:
-    # Exclude new dependencies on old rubies to run less jobs
-    - rvm: 2.5.8
-      gemfile: gemfiles/anycable_1.0.gemfile
-    - rvm: 2.5.8
-      gemfile: gemfiles/graphql_1.10.gemfile
-    - rvm: 2.5.8
+  include:
+    - rvm: 2.7.1
       gemfile: gemfiles/graphql_1.11.gemfile
-    # Exclude old dependencies on new rubies to run less jobs
-    - rvm: 2.6.5
-      gemfile: gemfiles/anycable_0.6.gemfile
-    - rvm: 2.6.5
-      gemfile: gemfiles/graphql_1.9.gemfile
-    - rvm: 2.6.5
+      env: GRAPHQL_RUBY_INTERPRETER=yes
+    - rvm: 2.7.1
+      gemfile: gemfiles/graphql_1.11.gemfile
+      env: GRAPHQL_RUBY_INTERPRETER=no
+    - rvm: 2.7.1
+      gemfile: gemfiles/anycable_1.0.gemfile
+    - rvm: 2.6.6
       gemfile: gemfiles/graphql_1.10.gemfile
+      env: GRAPHQL_RUBY_INTERPRETER=yes
+    - rvm: 2.6.6
+      gemfile: gemfiles/graphql_1.10.gemfile
+      env: GRAPHQL_RUBY_INTERPRETER=no
+    - rvm: 2.6.6
+      gemfile: gemfiles/anycable_0.6.gemfile
+    - rvm: 2.5.8
+      gemfile: gemfiles/graphql_1.9.gemfile
