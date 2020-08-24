@@ -9,7 +9,7 @@ group :development, :test do
   gem "pry-byebug", platform: :mri
   gem "rubocop"
   gem "rubocop-rspec"
-  gem "fakeredis", branch: "exists-should-return-number", git: "https://github.com/artygus/fakeredis"
+  gem "fakeredis", git: "https://github.com/guilleiguaran/fakeredis"
 end
 
 gemspec path: "../"
