@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module GraphQL
-  module Anycable
+  module AnyCable
     module Cleaner
       extend self
 
@@ -55,11 +55,11 @@ module GraphQL
       end
 
       def redis
-        GraphQL::Anycable.redis
+        GraphQL::AnyCable.redis
       end
 
       def config
-        GraphQL::Anycable.config
+        GraphQL::AnyCable.config
       end
     end
   end

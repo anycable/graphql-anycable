@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe GraphQL::Anycable do
+RSpec.describe GraphQL::AnyCable do
   subject do
     AnycableSchema.execute(
       query: query,

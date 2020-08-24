@@ -3,7 +3,7 @@
 require "rails"
 
 module GraphQL
-  module Anycable
+  module AnyCable
     class Railtie < ::Rails::Railtie
       rake_tasks do
         path = File.expand_path(__dir__)

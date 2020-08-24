@@ -111,7 +111,7 @@ To avoid filling Redis storage with stale subscription data:
 
 ## Configuration
 
-GraphQL-Anycable uses [anyway_config] to configure itself. There are several possibilities to configure this gem:
+GraphQL-AnyCable uses [anyway_config] to configure itself. There are several possibilities to configure this gem:
 
  1. Environment variables:
 
@@ -132,7 +132,7 @@ GraphQL-Anycable uses [anyway_config] to configure itself. There are several pos
  3. Configuration from your application code:
 
     ```ruby
-    GraphQL::Anycable.configure do |config|
+    GraphQL::AnyCable.configure do |config|
       config.subscription_expiration_seconds = 3600 # 1 hour
     end
     ```

@@ -13,17 +13,17 @@ namespace :graphql do
     namespace :clean do
       # Clean up old channels
       task :channels do
-        GraphQL::Anycable::Cleaner.clean_channels
+        GraphQL::AnyCable::Cleaner.clean_channels
       end
 
       # Clean up old subscriptions (they should have expired by themselves)
       task :subscriptions do
-        GraphQL::Anycable::Cleaner.clean_subscriptions
+        GraphQL::AnyCable::Cleaner.clean_subscriptions
       end
 
       # Clean up subscription_ids from events for expired subscriptions
       task :events do
-        GraphQL::Anycable::Cleaner.clean_events
+        GraphQL::AnyCable::Cleaner.clean_events
       end
     end
   end

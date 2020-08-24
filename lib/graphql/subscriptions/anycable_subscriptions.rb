@@ -54,7 +54,7 @@ module GraphQL
     class AnyCableSubscriptions < GraphQL::Subscriptions
       extend Forwardable
 
-      def_delegators :"GraphQL::Anycable", :redis, :config
+      def_delegators :"GraphQL::AnyCable", :redis, :config
 
       SUBSCRIPTION_PREFIX = "graphql-subscription:"
       SUBSCRIPTION_EVENTS_PREFIX = "graphql-subscription-events:"

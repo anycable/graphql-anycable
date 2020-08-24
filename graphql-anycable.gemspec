@@ -6,7 +6,7 @@ require "graphql/anycable/version"
 
 Gem::Specification.new do |spec|
   spec.name          = "graphql-anycable"
-  spec.version       = GraphQL::Anycable::VERSION
+  spec.version       = GraphQL::AnyCable::VERSION
   spec.authors       = ["Andrey Novikov"]
   spec.email         = ["envek@envek.name"]
 

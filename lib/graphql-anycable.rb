@@ -9,7 +9,7 @@ require_relative "graphql/anycable/railtie" if defined?(Rails)
 require_relative "graphql/subscriptions/anycable_subscriptions"
 
 module GraphQL
-  module Anycable
+  module AnyCable
     module_function
 
     def redis
@@ -24,7 +24,7 @@ module GraphQL
     end
 
     def config
-      @config ||= GraphQL::Anycable::Config.new
+      @config ||= GraphQL::AnyCable::Config.new
     end
 
     def configure
@@ -32,3 +32,6 @@ module GraphQL
     end
   end
 end
+
+# For backward compatibility
+GraphQL::Anycable = GraphQL::AnyCable
