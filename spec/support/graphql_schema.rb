@@ -21,7 +21,7 @@ class SubscriptionType < GraphQL::Schema::Object
 end
 
 class AnycableSchema < GraphQL::Schema
-  use GraphQL::Subscriptions::AnyCableSubscriptions
+  use GraphQL::AnyCable
 
   if TESTING_GRAPHQL_RUBY_INTERPRETER
     use GraphQL::Execution::Interpreter

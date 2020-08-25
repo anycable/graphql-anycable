@@ -50,7 +50,7 @@ Or install it yourself as:
  
     ```ruby
     class MySchema < GraphQL::Schema
-      use GraphQL::Subscriptions::AnyCableSubscriptions
+      use GraphQL::AnyCable
     
       subscription SubscriptionType
     end
