@@ -1,0 +1,69 @@
+name: Run tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - 'v*'
+
+jobs:
+  test:
+    name: "Run tests"
+    if: "! contains(toJSON(github.event.commits.latest.message), '[ci skip]')"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ruby: 2.7
+            graphql: '~> 1.11.0'
+            anycable: '~> 1.0.0'
+            interpreter: yes
+          - ruby: 2.7
+            graphql: '~> 1.11.0'
+            anycable: '~> 1.0.0'
+            interpreter: no
+          - ruby: 2.6
+            graphql: '~> 1.10.0'
+            anycable: '~> 1.0.0'
+            interpreter: yes
+          - ruby: 2.6
+            graphql: '~> 1.10.0'
+            anycable: '~> 1.0.0'
+            interpreter: no
+          - ruby: 2.5
+            graphql: '~> 1.9.0'
+            anycable: '~> 0.6.0'
+            interpreter: yes
+          - ruby: 2.5
+            graphql: '~> 1.9.0'
+            anycable: '~> 0.6.0'
+            interpreter: no
+    container:
+      image: ruby:${{ matrix.ruby }}
+      env:
+        CI: true
+        GRAPHQL_RUBY_VERSION: ${{ matrix.graphql }}
+        ANYCABLE_VERSION: ${{ matrix.anycable }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: vendor/bundle
+          key: bundle-${{ matrix.ruby }}-${{ matrix.graphql }}-${{ matrix.anycable }}-${{ hashFiles('**/*.gemspec') }}-${{ hashFiles('**/Gemfile') }}
+          restore-keys: |
+            bundle-${{ matrix.ruby }}-${{ matrix.graphql }}-${{ matrix.anycable }}-
+            bundle-${{ matrix.ruby }}-
+      - name: Upgrade Bundler to 2.0 (for older Rubies)
+        run: gem install bundler -v '~> 2.0'
+      - name: Bundle install
+        run: |
+          bundle config path vendor/bundle
+          bundle install
+          bundle update
+      - name: Run RSpec
+        env:
+          GRAPHQL_RUBY_INTERPRETER: ${{ matrix.interpreter }}
+        run: bundle exec rspec
