@@ -139,6 +139,43 @@ GraphQL-Anycable uses [anyway_config] to configure itself. There are several pos
 
 And any other way provided by [anyway_config]. Check its documentation!
 
+## Data model
+
+As in AnyCable there is no place to store subscription data in-memory, it should be persisted somewhere to be retrieved on `GraphQLSchema.subscriptions.trigger` and sent to subscribed clients. `graphql-anycable` uses the same Redis database as AnyCable itself.
+
+ 1. Event subscriptions: `graphql-event:#{event.topic}` set containing identifiers for all subscriptions for given operation with certain context and arguments (serialized in _topic_). Used to find all subscriptions on `GraphQLSchema.subscriptions.trigger`.
+
+    ```
+    SMEMBERS graphql-event:1:myStats:
+    => 52ee8d65-275e-4d22-94af-313129116388
+    ```
+
+ 2. Subscription data: `graphql-subscription:#{subscription_id}` hash contains everything required to evaluate subscription on trigger and create data for client.
+
+    ```
+    HGETALL graphql-subscription:52ee8d65-275e-4d22-94af-313129116388
+    => {
+      context:        '{"user_id":1,"user":{"__gid__":"Z2lkOi8vZWJheS1tYWcyL1VzZXIvMQ"},"subscription_id":"52ee8d65-275e-4d22-94af-313129116388\","action_cable_stream":"graphql-subscription:52ee8d65-275e-4d22-94af-313129116388",}',
+      variables:      '{}',
+      operation_name: 'MyStats'
+      query_string:   'subscription MyStats { myStatsUpdated { completed total processed __typename } }',
+    }
+    ```
+
+ 3. Channel subscriptions: `graphql-channel:#{channel_id}` set containing identifiers for subscriptions created in ActionCable channel to delete them on client disconnect.
+
+    ```
+    SMEMBERS graphql-channel:17420c6ed9e
+    => 52ee8d65-275e-4d22-94af-313129116388
+    ```
+
+ 4. Subscription events: `graphql-subscription-events:#{subscription_id}` set containing event topics to delete subscription identifier from event subscriptions set on unsubscribe (or client disconnect).
+
+    ```
+    SMEMBERS graphql-subscription-events:52ee8d65-275e-4d22-94af-313129116388
+    => 1:myStats:
+    ```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
