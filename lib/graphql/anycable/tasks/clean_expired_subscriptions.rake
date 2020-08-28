@@ -5,10 +5,7 @@ require "graphql-anycable"
 namespace :graphql do
   namespace :anycable do
     desc "Clean up stale graphql channels, subscriptions, and events from redis"
-    task clean: %i[clean:channels clean:subscriptions clean:events]
-
-    # Old name that was used earlier
-    task clean_expired_subscriptions: :clean
+    task clean: %i[clean:channels clean:subscriptions clean:events clean:fingerprint_subscriptions clean:topic_fingerprints]
 
     namespace :clean do
       # Clean up old channels
@@ -21,9 +18,19 @@ namespace :graphql do
         GraphQL::AnyCable::Cleaner.clean_subscriptions
       end
 
-      # Clean up subscription_ids from events for expired subscriptions
+      # Clean up legacy subscription_ids from events for expired subscriptions
       task :events do
         GraphQL::AnyCable::Cleaner.clean_events
+      end
+
+      # Clean up subscription_ids from event fingerprints for expired subscriptions
+      task :fingerprint_subscriptions do
+        GraphQL::AnyCable::Cleaner.clean_fingerprint_subscriptions
+      end
+
+      # Clean up fingerprints from event topics. for expired subscriptions
+      task :topic_fingerprints do
+        GraphQL::AnyCable::Cleaner.clean_topic_fingerprints
       end
     end
   end

@@ -13,6 +13,7 @@ TESTING_GRAPHQL_RUBY_INTERPRETER =
   end
 
 require_relative "support/graphql_schema"
+require_relative "support/graphql_schema_broadcast"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

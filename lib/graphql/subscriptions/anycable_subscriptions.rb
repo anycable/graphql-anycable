@@ -56,10 +56,13 @@ module GraphQL
 
       def_delegators :"GraphQL::AnyCable", :redis, :config
 
-      SUBSCRIPTION_PREFIX = "graphql-subscription:"
-      SUBSCRIPTION_EVENTS_PREFIX = "graphql-subscription-events:"
+      SUBSCRIPTION_PREFIX = "graphql-subscription:" # Stores subscription data: query, context, …
+      FINGERPRINTS_PREFIX = "graphql-fingerprints:"  # To get fingerprints by topic
+      SUBSCRIPTIONS_PREFIX = "graphql-subcriptions:" # To get subscriptions by fingerprint
+      CHANNEL_PREFIX = "graphql-channel:" # Auxiliary structure for whole channel's subscriptions cleanup
+      # For backward compatibility:
       EVENT_PREFIX = "graphql-event:"
-      CHANNEL_PREFIX = "graphql-channel:"
+      SUBSCRIPTION_EVENTS_PREFIX = "graphql-subscription-events:"
 
       # @param serializer [<#dump(obj), #load(string)] Used for serializing messages before handing them to `.broadcast(msg)`
       def initialize(serializer: Serialize, **rest)
@@ -70,6 +73,37 @@ module GraphQL
       # An event was triggered.
       # Re-evaluate all subscribed queries and push the data over ActionCable.
       def execute_all(event, object)
+        execute_legacy(event, object) if config.handle_legacy_subscriptions
+
+        fingerprints = redis.smembers(FINGERPRINTS_PREFIX + event.topic)
+        return if fingerprints.empty?
+
+        grouped_subscription_ids =
+          redis.pipelined do
+            fingerprints.map do |fingerprint|
+              redis.smembers(SUBSCRIPTIONS_PREFIX + fingerprint)
+            end
+          end
+
+        grouped_subscription_ids.each do |subscription_ids|
+          execute_grouped(subscription_ids, event, object)
+        end
+      end
+
+      def execute_grouped(subscription_ids, event, object)
+        return if subscription_ids.empty?
+
+        # The fingerprint has told us that this response should be shared by all subscribers,
+        # so just run it once, then deliver the result to every subscriber
+        result = execute_update(subscription_ids.first, event, object)
+        # Having calculated the result _once_, send the same payload to all subscribers
+        subscription_ids.each do |subscription_id|
+          deliver(subscription_id, result)
+        end
+      end
+
+      # For migration from pre-1.0 graphql-anycable gem
+      def execute_legacy(event, object)
         redis.smembers(EVENT_PREFIX + event.topic).each do |subscription_id|
           next unless redis.exists?(SUBSCRIPTION_PREFIX + subscription_id)
           execute(subscription_id, event, object)
@@ -86,7 +120,7 @@ module GraphQL
       # Save query to "storage" (in redis)
       def write_subscription(query, events)
         context = query.context.to_h
-        subscription_id = context[:subscription_id] ||= build_id
+        subscription_id = context.delete(:subscription_id) || build_id
         channel = context.delete(:channel)
         stream = SUBSCRIPTION_PREFIX + subscription_id
         channel.stream_from(stream)
@@ -95,15 +129,16 @@ module GraphQL
           query_string: query.query_string,
           variables: query.provided_variables.to_json,
           context: @serializer.dump(context.to_h),
-          operation_name: query.operation_name
+          operation_name: query.operation_name,
+          events: events.map { |e| { topic: e.topic, fingerprint: e.fingerprint } }.to_json,
         }
 
         redis.multi do
           redis.sadd(CHANNEL_PREFIX + channel.params["channelId"], subscription_id)
           redis.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, data)
-          redis.sadd(SUBSCRIPTION_EVENTS_PREFIX + subscription_id, events.map(&:topic))
           events.each do |event|
-            redis.sadd(EVENT_PREFIX + event.topic, subscription_id)
+            redis.sadd(FINGERPRINTS_PREFIX + event.topic, event.fingerprint)
+            redis.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, subscription_id)
           end
           next unless config.subscription_expiration_seconds
           redis.expire(CHANNEL_PREFIX + channel.params["channelId"], config.subscription_expiration_seconds)
@@ -123,18 +158,19 @@ module GraphQL
         end
       end
 
-      # The channel was closed, forget about it.
       def delete_subscription(subscription_id)
-        # Remove subscription ids from all events
-        events = redis.smembers(SUBSCRIPTION_EVENTS_PREFIX + subscription_id)
-        events.each do |event_topic|
-          redis.srem(EVENT_PREFIX + event_topic, subscription_id)
+        events = redis.hget(SUBSCRIPTION_PREFIX + subscription_id, :events)
+        events = events ? JSON.parse(events) : []
+        events.each do |event|
+          redis.srem(FINGERPRINTS_PREFIX + event["topic"], event["fingerprint"])
+          redis.srem(SUBSCRIPTIONS_PREFIX + event["fingerprint"], subscription_id)
+          redis.srem(EVENT_PREFIX + event["topic"], subscription_id) if config.handle_legacy_subscriptions
         end
         # Delete subscription itself
-        redis.del(SUBSCRIPTION_EVENTS_PREFIX + subscription_id)
         redis.del(SUBSCRIPTION_PREFIX + subscription_id)
       end
 
+      # The channel was closed, forget about it and its subscriptions
       def delete_channel_subscriptions(channel_id)
         redis.smembers(CHANNEL_PREFIX + channel_id).each do |subscription_id|
           delete_subscription(subscription_id)

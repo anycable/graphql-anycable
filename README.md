@@ -140,23 +140,51 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
 
 And any other way provided by [anyway_config]. Check its documentation!
 
+## Broadcasting
+
+```ruby
+class MySchema < GraphQL::Schema
+  use GraphQL::Execution::Interpreter
+  use GraphQL::Analysis::AST
+  use GraphQL::AnyCable, broadcast: true, default_broadcastable: true
+
+  subscription SubscriptionType
+end
+```
+
+See GraphQL-Ruby [broadcasting docs](https://graphql-ruby.org/subscriptions/broadcast.html) for more details.
+
 ## Data model
 
 As in AnyCable there is no place to store subscription data in-memory, it should be persisted somewhere to be retrieved on `GraphQLSchema.subscriptions.trigger` and sent to subscribed clients. `graphql-anycable` uses the same Redis database as AnyCable itself.
 
- 1. Event subscriptions: `graphql-event:#{event.topic}` set containing identifiers for all subscriptions for given operation with certain context and arguments (serialized in _topic_). Used to find all subscriptions on `GraphQLSchema.subscriptions.trigger`.
+ 1. Grouped event subscriptions: `graphql-fingerprints:#{event.topic}` set. Used to find all subscriptions on `GraphQLSchema.subscriptions.trigger`.
 
     ```
-    SMEMBERS graphql-event:1:myStats:
+    SMEMBERS graphql-fingerprints:1:myStats:
+    => 1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o=
+    ```
+
+    Event subscriptions: `graphql-subscriptions:#{event.fingerptint}` set containing identifiers for all subscriptions for given operation with certain context and arguments (serialized in _topic_). Fingerprints are already scoped by topic.
+
+    ```
+    SMEMBERS graphql-subscriptions:1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o=
     => 52ee8d65-275e-4d22-94af-313129116388
     ```
+
+    > For backward compatibility with pre-1.0 versions of this gem older `graphql-event:#{event.topic}` set containing subscription identifiers is also supported.
+    >
+    > ```
+    > SMEMBERS graphql-event:1:myStats:
+    > => 52ee8d65-275e-4d22-94af-313129116388
+    > ```
 
  2. Subscription data: `graphql-subscription:#{subscription_id}` hash contains everything required to evaluate subscription on trigger and create data for client.
 
     ```
     HGETALL graphql-subscription:52ee8d65-275e-4d22-94af-313129116388
     => {
-      context:        '{"user_id":1,"user":{"__gid__":"Z2lkOi8vZWJheS1tYWcyL1VzZXIvMQ"},"subscription_id":"52ee8d65-275e-4d22-94af-313129116388"}',
+      context:        '{"user_id":1,"user":{"__gid__":"Z2lkOi8vZWJheS1tYWcyL1VzZXIvMQ"}}',
       variables:      '{}',
       operation_name: 'MyStats'
       query_string:   'subscription MyStats { myStatsUpdated { completed total processed __typename } }',

@@ -23,7 +23,7 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   let(:channel) do
-    double
+    double("Channel", id: "ohmycables", params: { "channelId" => "ohmycables" }, stream_from: nil)
   end
 
   let(:anycable) { AnyCable.broadcast_adapter }
@@ -33,8 +33,6 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   before do
-    allow(channel).to receive(:stream_from)
-    allow(channel).to receive(:params).and_return("channelId" => "ohmycables")
     allow(anycable).to receive(:broadcast)
   end
 
@@ -80,6 +78,33 @@ RSpec.describe GraphQL::AnyCable do
 
         expect(anycable).to have_received(:broadcast).with("graphql-subscription:#{subscription_id}", expected_result)
       end
+    end
+  end
+
+  describe ".delete_channel_subscriptions" do
+    before do
+      AnycableSchema.execute(
+        query: query,
+        context: { channel: channel, subscription_id: subscription_id },
+        variables: {},
+        operation_name: "SomeSubscription",
+      )
+    end
+
+    let(:redis) { AnycableSchema.subscriptions.redis }
+
+    subject do
+      AnycableSchema.subscriptions.delete_channel_subscriptions(channel.id)
+    end
+
+    it "removes subscription from redis" do
+      expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be true
+      expect(redis.exists?("graphql-channel:ohmycables")).to be true
+      expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be true
+      subject
+      expect(redis.exists?("graphql-channel:ohmycables")).to be false
+      expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be false
+      expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
     end
   end
 end
