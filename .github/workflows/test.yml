@@ -18,6 +18,9 @@ jobs:
       matrix:
         include:
           - ruby: 2.7
+            graphql: '~> 1.12.0'
+            anycable: '~> 1.0.0'
+          - ruby: 2.7
             graphql: '~> 1.11.0'
             anycable: '~> 1.0.0'
             interpreter: yes
