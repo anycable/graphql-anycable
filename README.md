@@ -156,7 +156,7 @@ As in AnyCable there is no place to store subscription data in-memory, it should
     ```
     HGETALL graphql-subscription:52ee8d65-275e-4d22-94af-313129116388
     => {
-      context:        '{"user_id":1,"user":{"__gid__":"Z2lkOi8vZWJheS1tYWcyL1VzZXIvMQ"},"subscription_id":"52ee8d65-275e-4d22-94af-313129116388\","action_cable_stream":"graphql-subscription:52ee8d65-275e-4d22-94af-313129116388",}',
+      context:        '{"user_id":1,"user":{"__gid__":"Z2lkOi8vZWJheS1tYWcyL1VzZXIvMQ"},"subscription_id":"52ee8d65-275e-4d22-94af-313129116388"}',
       variables:      '{}',
       operation_name: 'MyStats'
       query_string:   'subscription MyStats { myStatsUpdated { completed total processed __typename } }',

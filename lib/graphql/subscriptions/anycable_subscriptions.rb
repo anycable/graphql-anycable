@@ -88,7 +88,7 @@ module GraphQL
         context = query.context.to_h
         subscription_id = context[:subscription_id] ||= build_id
         channel = context.delete(:channel)
-        stream = context[:action_cable_stream] ||= SUBSCRIPTION_PREFIX + subscription_id
+        stream = SUBSCRIPTION_PREFIX + subscription_id
         channel.stream_from(stream)
 
         data = {
