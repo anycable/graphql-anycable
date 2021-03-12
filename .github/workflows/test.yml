@@ -1,4 +1,4 @@
-name: Run tests
+name: Tests
 
 on:
   pull_request:
@@ -10,16 +10,20 @@ on:
 
 jobs:
   test:
-    name: "Run tests"
-    if: "! contains(toJSON(github.event.commits.latest.message), '[ci skip]')"
+    name: "GraphQL-Ruby ${{ matrix.graphql }} (interpreter: ${{ matrix.interpreter }}) with AnyCable ${{ matrix.anycable }} on Ruby ${{ matrix.ruby }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - ruby: 2.7
+          - ruby: "3.0"
             graphql: '~> 1.12.0'
             anycable: '~> 1.0.0'
+            interpreter: yes
+          - ruby: "3.0"
+            graphql: '~> 1.12.0'
+            anycable: '~> 1.0.0'
+            interpreter: no
           - ruby: 2.7
             graphql: '~> 1.11.0'
             anycable: '~> 1.0.0'
