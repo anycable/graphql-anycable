@@ -32,19 +32,24 @@ RSpec.describe GraphQL::AnyCable do
     "some-truly-random-number"
   end
 
+  let(:fingerprint) do
+    ":productUpdated:/SomeSubscription/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o="
+  end
+
   before do
     allow(anycable).to receive(:broadcast)
+    allow_any_instance_of(GraphQL::Subscriptions::Event).to receive(:fingerprint).and_return(fingerprint)
   end
 
   it "subscribes channel to stream updates from GraphQL subscription" do
     subject
-    expect(channel).to have_received(:stream_from).with("graphql-subscription:#{subscription_id}")
+    expect(channel).to have_received(:stream_from).with("graphql-subscriptions:#{fingerprint}")
   end
 
   it "broadcasts message when event is being triggered" do
     subject
     AnycableSchema.subscriptions.trigger(:product_updated, {}, { id: 1, title: "foo" })
-    expect(anycable).to have_received(:broadcast).with("graphql-subscription:#{subscription_id}", expected_result)
+    expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
   end
 
   context "with multiple subscriptions in one query" do
@@ -61,7 +66,7 @@ RSpec.describe GraphQL::AnyCable do
       it "broadcasts message only for update event" do
         subject
         AnycableSchema.subscriptions.trigger(:product_updated, {}, { id: 1, title: "foo" })
-        expect(anycable).to have_received(:broadcast).with("graphql-subscription:#{subscription_id}", expected_result)
+        expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
       end
     end
 
@@ -76,7 +81,7 @@ RSpec.describe GraphQL::AnyCable do
         subject
         AnycableSchema.subscriptions.trigger(:product_created, {}, { id: 1, title: "Gravizapa" })
 
-        expect(anycable).to have_received(:broadcast).with("graphql-subscription:#{subscription_id}", expected_result)
+        expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
       end
     end
   end

@@ -43,10 +43,9 @@ RSpec.describe "Broadcasting" do
 
     it "uses broadcasting to resolve query only once" do
       2.times { subscribe(query) }
-      # allow(object).to receive(:title)
       BroadcastSchema.subscriptions.trigger(:post_created, {}, object)
       expect(object).to have_received(:title).once
-      expect(anycable).to have_received(:broadcast).twice
+      expect(anycable).to have_received(:broadcast).once
     end
   end
 
@@ -59,7 +58,6 @@ RSpec.describe "Broadcasting" do
 
     it "resolves query for every client" do
       2.times { subscribe(query) }
-      # allow(object).to receive(:title)
       BroadcastSchema.subscriptions.trigger(:post_created, {}, object)
       expect(object).to have_received(:title).twice
       expect(anycable).to have_received(:broadcast).twice

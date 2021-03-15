@@ -56,10 +56,10 @@ module GraphQL
 
       def_delegators :"GraphQL::AnyCable", :redis, :config
 
-      SUBSCRIPTION_PREFIX = "graphql-subscription:"  # HASH: Stores subscription data: query, context, …
-      FINGERPRINTS_PREFIX = "graphql-fingerprints:"  # ZSET: To get fingerprints by topic
-      SUBSCRIPTIONS_PREFIX = "graphql-subcriptions:" # SET:  To get subscriptions by fingerprint
-      CHANNEL_PREFIX = "graphql-channel:"            # SET:  Auxiliary structure for whole channel's subscriptions cleanup
+      SUBSCRIPTION_PREFIX  = "graphql-subscription:"  # HASH: Stores subscription data: query, context, …
+      FINGERPRINTS_PREFIX  = "graphql-fingerprints:"  # ZSET: To get fingerprints by topic
+      SUBSCRIPTIONS_PREFIX = "graphql-subscriptions:" # SET:  To get subscriptions by fingerprint
+      CHANNEL_PREFIX       = "graphql-channel:"       # SET:  Auxiliary structure for whole channel's subscriptions cleanup
       # For backward compatibility:
       EVENT_PREFIX = "graphql-event:"
       SUBSCRIPTION_EVENTS_PREFIX = "graphql-subscription-events:"
@@ -78,55 +78,57 @@ module GraphQL
         fingerprints = redis.zrevrange(FINGERPRINTS_PREFIX + event.topic, 0, -1)
         return if fingerprints.empty?
 
-        grouped_subscription_ids =
+        fingerprint_subscription_ids = Hash[fingerprints.zip(
           redis.pipelined do
             fingerprints.map do |fingerprint|
               redis.smembers(SUBSCRIPTIONS_PREFIX + fingerprint)
             end
           end
+        )]
 
-        grouped_subscription_ids.each do |subscription_ids|
-          execute_grouped(subscription_ids, event, object)
+        fingerprint_subscription_ids.each do |fingerprint, subscription_ids|
+          execute_grouped(fingerprint, subscription_ids, event, object)
         end
+
+        # Call to +trigger+ returns this. Convenient for playing in console
+        Hash[fingerprint_subscription_ids.map { |k,v| [k, v.size] }]
       end
 
-      def execute_grouped(subscription_ids, event, object)
+      def execute_grouped(fingerprint, subscription_ids, event, object)
         return if subscription_ids.empty?
 
         # The fingerprint has told us that this response should be shared by all subscribers,
         # so just run it once, then deliver the result to every subscriber
         result = execute_update(subscription_ids.first, event, object)
+        return unless result
+
         # Having calculated the result _once_, send the same payload to all subscribers
-        payload = prepare_payload(result)
-        redis.pipelined do # Here we rely on the fact that anycable broadcast does only Redis PUBLISH and nothing else
-          subscription_ids.each do |subscription_id|
-            deliver(subscription_id, payload)
-          end
-        end
+        deliver(SUBSCRIPTIONS_PREFIX + fingerprint, result)
       end
 
       # For migration from pre-1.0 graphql-anycable gem
       def execute_legacy(event, object)
         redis.smembers(EVENT_PREFIX + event.topic).each do |subscription_id|
           next unless redis.exists?(SUBSCRIPTION_PREFIX + subscription_id)
-          execute(subscription_id, event, object)
+          result = execute_update(subscription_id, event, object)
+          next unless result
+
+          deliver(SUBSCRIPTION_PREFIX + subscription_id, result)
         end
       end
 
-      # Redefine this method as we want to pass already jsonified string to our +deliver+ implementation
+      # Disable this method as there is no fingerprint (it can be retrieved from subscription though)
       def execute(subscription_id, event, object)
-        res = execute_update(subscription_id, event, object)
-        if !res.nil?
-          deliver(subscription_id, prepare_payload(res))
-        end
+        raise NotImplementedError, "Use execute_all method instead of execute to get actual event fingerprint"
       end
 
       # This subscription was re-evaluated.
       # Send it to the specific stream where this client was waiting.
-      # @param subscription_id [String]
-      # @param payload [String] JSON-encoded result to send to clients
-      def deliver(subscription_id, payload)
-        anycable.broadcast(SUBSCRIPTION_PREFIX + subscription_id, payload)
+      # @param strean_key [String]
+      # @param result [#to_h] result to send to clients
+      def deliver(stream_key, result)
+        payload = { result: result.to_h, more: true }.to_json
+        anycable.broadcast(stream_key, payload)
       end
 
       # Save query to "storage" (in redis)
@@ -134,15 +136,17 @@ module GraphQL
         context = query.context.to_h
         subscription_id = context.delete(:subscription_id) || build_id
         channel = context.delete(:channel)
-        stream = SUBSCRIPTION_PREFIX + subscription_id
-        channel.stream_from(stream)
+
+        events.each do |event|
+          channel.stream_from(SUBSCRIPTIONS_PREFIX + event.fingerprint)
+        end
 
         data = {
           query_string: query.query_string,
           variables: query.provided_variables.to_json,
           context: @serializer.dump(context.to_h),
           operation_name: query.operation_name,
-          events: events.map { |e| { topic: e.topic, fingerprint: e.fingerprint } }.to_json,
+          events: events.map { |e| [e.topic, e.fingerprint] }.to_h.to_json,
         }
 
         redis.multi do
@@ -172,13 +176,13 @@ module GraphQL
 
       def delete_subscription(subscription_id)
         events = redis.hget(SUBSCRIPTION_PREFIX + subscription_id, :events)
-        events = events ? JSON.parse(events) : []
+        events = events ? JSON.parse(events) : {}
         fingerprint_subscriptions = {}
         redis.pipelined do
-          events.each do |event|
-            redis.srem(SUBSCRIPTIONS_PREFIX + event["fingerprint"], subscription_id)
-            score = redis.zincrby(FINGERPRINTS_PREFIX + event["topic"], -1, event["fingerprint"])
-            fingerprint_subscriptions[FINGERPRINTS_PREFIX + event["topic"]] = score
+          events.each do |topic, fingerprint|
+            redis.srem(SUBSCRIPTIONS_PREFIX + fingerprint, subscription_id)
+            score = redis.zincrby(FINGERPRINTS_PREFIX + topic, -1, fingerprint)
+            fingerprint_subscriptions[FINGERPRINTS_PREFIX + topic] = score
           end
           # Delete subscription itself
           redis.del(SUBSCRIPTION_PREFIX + subscription_id)
@@ -216,10 +220,6 @@ module GraphQL
 
       def anycable
         @anycable ||= ::AnyCable.broadcast_adapter
-      end
-
-      def prepare_payload(result)
-        { result: result.to_h, more: true }.to_json
       end
     end
   end
