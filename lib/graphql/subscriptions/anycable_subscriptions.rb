@@ -97,8 +97,11 @@ module GraphQL
         # so just run it once, then deliver the result to every subscriber
         result = execute_update(subscription_ids.first, event, object)
         # Having calculated the result _once_, send the same payload to all subscribers
-        subscription_ids.each do |subscription_id|
-          deliver(subscription_id, result)
+        payload = prepare_payload(result)
+        redis.pipelined do # Here we rely on the fact that anycable broadcast does only Redis PUBLISH and nothing else
+          subscription_ids.each do |subscription_id|
+            deliver(subscription_id, payload)
+          end
         end
       end
 
@@ -110,11 +113,20 @@ module GraphQL
         end
       end
 
+      # Redefine this method as we want to pass already jsonified string to our +deliver+ implementation
+      def execute(subscription_id, event, object)
+        res = execute_update(subscription_id, event, object)
+        if !res.nil?
+          deliver(subscription_id, prepare_payload(res))
+        end
+      end
+
       # This subscription was re-evaluated.
       # Send it to the specific stream where this client was waiting.
-      def deliver(subscription_id, result)
-        payload = {result: result.to_h, more: true}
-        anycable.broadcast(SUBSCRIPTION_PREFIX + subscription_id, payload.to_json)
+      # @param subscription_id [String]
+      # @param payload [String] JSON-encoded result to send to clients
+      def deliver(subscription_id, payload)
+        anycable.broadcast(SUBSCRIPTION_PREFIX + subscription_id, payload)
       end
 
       # Save query to "storage" (in redis)
@@ -182,6 +194,10 @@ module GraphQL
 
       def anycable
         @anycable ||= ::AnyCable.broadcast_adapter
+      end
+
+      def prepare_payload(result)
+        { result: result.to_h, more: true }.to_json
       end
     end
   end
