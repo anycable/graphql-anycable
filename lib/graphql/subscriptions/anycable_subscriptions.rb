@@ -56,10 +56,10 @@ module GraphQL
 
       def_delegators :"GraphQL::AnyCable", :redis, :config
 
-      SUBSCRIPTION_PREFIX = "graphql-subscription:" # Stores subscription data: query, context, …
-      FINGERPRINTS_PREFIX = "graphql-fingerprints:"  # To get fingerprints by topic
-      SUBSCRIPTIONS_PREFIX = "graphql-subcriptions:" # To get subscriptions by fingerprint
-      CHANNEL_PREFIX = "graphql-channel:" # Auxiliary structure for whole channel's subscriptions cleanup
+      SUBSCRIPTION_PREFIX = "graphql-subscription:"  # HASH: Stores subscription data: query, context, …
+      FINGERPRINTS_PREFIX = "graphql-fingerprints:"  # ZSET: To get fingerprints by topic
+      SUBSCRIPTIONS_PREFIX = "graphql-subcriptions:" # SET:  To get subscriptions by fingerprint
+      CHANNEL_PREFIX = "graphql-channel:"            # SET:  Auxiliary structure for whole channel's subscriptions cleanup
       # For backward compatibility:
       EVENT_PREFIX = "graphql-event:"
       SUBSCRIPTION_EVENTS_PREFIX = "graphql-subscription-events:"
@@ -75,7 +75,7 @@ module GraphQL
       def execute_all(event, object)
         execute_legacy(event, object) if config.handle_legacy_subscriptions
 
-        fingerprints = redis.smembers(FINGERPRINTS_PREFIX + event.topic)
+        fingerprints = redis.zrevrange(FINGERPRINTS_PREFIX + event.topic, 0, -1)
         return if fingerprints.empty?
 
         grouped_subscription_ids =
@@ -149,7 +149,7 @@ module GraphQL
           redis.sadd(CHANNEL_PREFIX + channel.params["channelId"], subscription_id)
           redis.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, data)
           events.each do |event|
-            redis.sadd(FINGERPRINTS_PREFIX + event.topic, event.fingerprint)
+            redis.zincrby(FINGERPRINTS_PREFIX + event.topic, 1, event.fingerprint)
             redis.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, subscription_id)
           end
           next unless config.subscription_expiration_seconds
@@ -173,13 +173,35 @@ module GraphQL
       def delete_subscription(subscription_id)
         events = redis.hget(SUBSCRIPTION_PREFIX + subscription_id, :events)
         events = events ? JSON.parse(events) : []
-        events.each do |event|
-          redis.srem(FINGERPRINTS_PREFIX + event["topic"], event["fingerprint"])
-          redis.srem(SUBSCRIPTIONS_PREFIX + event["fingerprint"], subscription_id)
-          redis.srem(EVENT_PREFIX + event["topic"], subscription_id) if config.handle_legacy_subscriptions
+        fingerprint_subscriptions = {}
+        redis.pipelined do
+          events.each do |event|
+            redis.srem(SUBSCRIPTIONS_PREFIX + event["fingerprint"], subscription_id)
+            score = redis.zincrby(FINGERPRINTS_PREFIX + event["topic"], -1, event["fingerprint"])
+            fingerprint_subscriptions[FINGERPRINTS_PREFIX + event["topic"]] = score
+          end
+          # Delete subscription itself
+          redis.del(SUBSCRIPTION_PREFIX + subscription_id)
         end
-        # Delete subscription itself
-        redis.del(SUBSCRIPTION_PREFIX + subscription_id)
+        # Clean up fingerprints that doesn't have any subscriptions left
+        redis.pipelined do
+          fingerprint_subscriptions.each do |key, score|
+            redis.zremrangebyscore(key, '-inf', '0') if score.value.zero?
+          end
+        end
+        delete_legacy_subscription(subscription_id)
+      end
+
+      def delete_legacy_subscription(subscription_id)
+        return unless config.handle_legacy_subscriptions
+
+        events = redis.smembers(SUBSCRIPTION_EVENTS_PREFIX + subscription_id)
+        redis.pipelined do
+          events.each do |event_topic|
+            redis.srem(EVENT_PREFIX + event_topic, subscription_id)
+          end
+          redis.del(SUBSCRIPTION_EVENTS_PREFIX + subscription_id)
+        end
       end
 
       # The channel was closed, forget about it and its subscriptions

@@ -103,7 +103,7 @@ RSpec.describe GraphQL::AnyCable do
       expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be true
       subject
       expect(redis.exists?("graphql-channel:ohmycables")).to be false
-      expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be false
+      expect(redis.zcard("graphql-fingerprints::productUpdated:")).to be_zero # Seems to be fakeredis bug
       expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
     end
   end
