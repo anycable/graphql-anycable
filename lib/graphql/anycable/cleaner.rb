@@ -65,7 +65,7 @@ module GraphQL
       def clean_topic_fingerprints
         redis.scan_each(match: "#{adapter::FINGERPRINTS_PREFIX}*") do |key|
           redis.zremrangebyscore(key, '-inf', '0')
-          redis.zmembers(key).each do |fingerprint|
+          redis.zrange(key, 0, -1).each do |fingerprint|
             next if redis.exists?(adapter::SUBSCRIPTIONS_PREFIX + fingerprint)
 
             redis.zrem(key, fingerprint)
