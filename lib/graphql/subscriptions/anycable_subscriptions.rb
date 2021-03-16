@@ -75,7 +75,7 @@ module GraphQL
       def execute_all(event, object)
         execute_legacy(event, object) if config.handle_legacy_subscriptions
 
-        fingerprints = redis.zrevrange(FINGERPRINTS_PREFIX + event.topic, 0, -1)
+        fingerprints = redis.zrange(FINGERPRINTS_PREFIX + event.topic, 0, -1)
         return if fingerprints.empty?
 
         fingerprint_subscription_ids = Hash[fingerprints.zip(
