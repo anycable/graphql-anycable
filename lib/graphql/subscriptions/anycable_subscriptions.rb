@@ -94,12 +94,15 @@ module GraphQL
         Hash[fingerprint_subscription_ids.map { |k,v| [k, v.size] }]
       end
 
+      # The fingerprint has told us that this response should be shared by all subscribers,
+      # so just run it once, then deliver the result to every subscriber
       def execute_grouped(fingerprint, subscription_ids, event, object)
         return if subscription_ids.empty?
 
-        # The fingerprint has told us that this response should be shared by all subscribers,
-        # so just run it once, then deliver the result to every subscriber
-        result = execute_update(subscription_ids.first, event, object)
+        subscription_id = subscription_ids.find { |sid| redis.exists?(SUBSCRIPTION_PREFIX + sid) }
+        return unless subscription_id # All subscriptions has expired but haven't cleaned up yet
+
+        result = execute_update(subscription_id, event, object)
         return unless result
 
         # Having calculated the result _once_, send the same payload to all subscribers
@@ -168,6 +171,8 @@ module GraphQL
           "#{SUBSCRIPTION_PREFIX}#{subscription_id}",
           :query_string, :variables, :context, :operation_name
         ).tap do |subscription|
+          return if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
+
           subscription[:context] = @serializer.load(subscription[:context])
           subscription[:variables] = JSON.parse(subscription[:variables])
           subscription[:operation_name] = nil if subscription[:operation_name].strip == ""

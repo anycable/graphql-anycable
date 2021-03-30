@@ -63,4 +63,23 @@ RSpec.describe "Broadcasting" do
       expect(anycable).to have_received(:broadcast).twice
     end
   end
+
+  context "when one of subscriptions got expired" do
+    let(:query) do
+      <<~GRAPHQL.strip
+        subscription SomeSubscription { postCreated{ id title } }
+      GRAPHQL
+    end
+
+    let(:redis) { AnycableSchema.subscriptions.redis }
+
+    it "doesn't fail" do
+      3.times { subscribe(query) }
+      redis.keys("graphql-subscription:*").last.tap(&redis.method(:del))
+      expect(redis.keys("graphql-subscription:*").size).to eq(2)
+      expect { BroadcastSchema.subscriptions.trigger(:post_created, {}, object) }.not_to raise_error
+      expect(object).to have_received(:title).once
+      expect(anycable).to have_received(:broadcast).once
+    end
+  end
 end
