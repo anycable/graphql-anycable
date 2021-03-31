@@ -51,7 +51,7 @@ Or install it yourself as:
  
     ```ruby
     class MySchema < GraphQL::Schema
-      use GraphQL::AnyCable
+      use GraphQL::AnyCable, broadcast: true
     
       subscription SubscriptionType
     end
@@ -100,6 +100,28 @@ Or install it yourself as:
     MySchema.subscriptions.trigger(:product_updated, {}, Product.first!, scope: account.id)
     ```
 
+## Broadcasting
+
+By default, graphql-anycable evaluates queries and transmits results for every subscription client individually. Of course, it is a waste of resources if you have hundreds or thousands clients subscribed to the same data (and has huge negative impact on performance).
+
+Thankfully, GraphQL-Ruby has added [Subscriptions Broadcast](https://graphql-ruby.org/subscriptions/broadcast.html) feature that allows to group exact same subscriptions, execute them and transmit results only once.
+
+To enable this feature, turn on [Interpreter](https://graphql-ruby.org/queries/interpreter.html) and pass `broadcast` option set to `true` to graphql-anycable.
+
+By default all fields are marked as _not safe for broadcasting_. If a subscription has at least one non-broadcastable field in its query, GraphQL-Ruby will execute every subscription for every client independently. If you sure that all your fields are safe to be broadcasted, you can pass `default_broadcastable` option set to `true` (but be aware that it can have security impllications!)
+
+```ruby
+class MySchema < GraphQL::Schema
+  use GraphQL::Execution::Interpreter # Required for graphql-ruby before 1.12.4
+  use GraphQL::Analysis::AST
+  use GraphQL::AnyCable, broadcast: true, default_broadcastable: true
+
+  subscription SubscriptionType
+end
+```
+
+See GraphQL-Ruby [broadcasting docs](https://graphql-ruby.org/subscriptions/broadcast.html) for more details.
+
 ## Operations
 
 To avoid filling Redis storage with stale subscription data:
@@ -119,6 +141,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     ```.env
     GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS=604800
     GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP=true
+    GRAPHQL_ANYCABLE_HANDLE_LEGACY_SUBSCRIPTIONS=false
     ```
 
  2. YAML configuration files:
@@ -128,6 +151,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     production:
       subscription_expiration_seconds: 300 # 5 minutes
       use_redis_object_on_cleanup: false # For restricted redis installations
+      handle_legacy_subscriptions: false # For seamless upgrade from pre-1.0 versions
     ```
 
  3. Configuration from your application code:
@@ -139,20 +163,6 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     ```
 
 And any other way provided by [anyway_config]. Check its documentation!
-
-## Broadcasting
-
-```ruby
-class MySchema < GraphQL::Schema
-  use GraphQL::Execution::Interpreter
-  use GraphQL::Analysis::AST
-  use GraphQL::AnyCable, broadcast: true, default_broadcastable: true
-
-  subscription SubscriptionType
-end
-```
-
-See GraphQL-Ruby [broadcasting docs](https://graphql-ruby.org/subscriptions/broadcast.html) for more details.
 
 ## Data model
 
