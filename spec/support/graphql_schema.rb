@@ -6,10 +6,6 @@ class Product < GraphQL::Schema::Object
 end
 
 class SubscriptionType < GraphQL::Schema::Object
-  if TESTING_GRAPHQL_RUBY_INTERPRETER
-    extend GraphQL::Subscriptions::SubscriptionRoot
-  end
-
   field :product_created, Product, null: false, resolver_method: :default_resolver
   field :product_updated, Product, null: false, resolver_method: :default_resolver
 

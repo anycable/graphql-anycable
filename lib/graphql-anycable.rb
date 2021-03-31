@@ -36,6 +36,3 @@ module GraphQL
     end
   end
 end
-
-# For backward compatibility
-GraphQL::Anycable = GraphQL::AnyCable

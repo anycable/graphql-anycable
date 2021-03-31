@@ -34,7 +34,7 @@ AnyCable must be configured with redis broadcast adapter (this is default).
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'graphql-anycable'
+gem 'graphql-anycable', '~> 1.0'
 ```
 
 And then execute:

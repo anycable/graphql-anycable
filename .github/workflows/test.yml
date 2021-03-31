@@ -25,28 +25,28 @@ jobs:
             anycable: '~> 1.0.0'
             interpreter: no
           - ruby: 2.7
-            graphql: '~> 1.11.0'
+            graphql: '~> 1.12.0'
             anycable: '~> 1.0.0'
             interpreter: yes
           - ruby: 2.7
+            graphql: '~> 1.12.0'
+            anycable: '~> 1.0.0'
+            interpreter: no
+          - ruby: 2.6
+            graphql: '~> 1.11.0'
+            anycable: '~> 1.0.0'
+            interpreter: yes
+          - ruby: 2.6
             graphql: '~> 1.11.0'
             anycable: '~> 1.0.0'
             interpreter: no
-          - ruby: 2.6
-            graphql: '~> 1.10.0'
+          - ruby: 2.5
+            graphql: '~> 1.11.0'
             anycable: '~> 1.0.0'
             interpreter: yes
-          - ruby: 2.6
-            graphql: '~> 1.10.0'
+          - ruby: 2.5
+            graphql: '~> 1.11.0'
             anycable: '~> 1.0.0'
-            interpreter: no
-          - ruby: 2.5
-            graphql: '~> 1.9.0'
-            anycable: '~> 0.6.0'
-            interpreter: yes
-          - ruby: 2.5
-            graphql: '~> 1.9.0'
-            anycable: '~> 0.6.0'
             interpreter: no
     container:
       image: ruby:${{ matrix.ruby }}
