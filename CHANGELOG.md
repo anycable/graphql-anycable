@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Removed
+
+ - Drop support for GraphQL-Ruby before 1.11
+
+ - Drop support for AnyCable before 1.0
+
+ - Drop `:action_cable_stream` option from context: it is not used in reality.
+
+   See [rmosolgo/graphql-ruby#3076](https://github.com/rmosolgo/graphql-ruby/pull/3076) for details
+
+## 0.5.0 - 2020-08-26
+
+### Changed
+
+ - Allow to plug in this gem by calling `use GraphQL::AnyCable` instead of `use GraphQL::Subscriptions::AnyCableSubscriptions`. [@Envek]
+ - Rename `GraphQL::Anycable` constant to `GraphQL::AnyCable` for consistency with AnyCable itself. [@Envek]
+
+## 0.4.2 - 2020-08-25
+
+Technical release to test publishing via GitHub Actions.
+
 ## 0.4.1 - 2020-08-21
 
 ### Fixed
