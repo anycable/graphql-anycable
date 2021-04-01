@@ -10,6 +10,7 @@ module GraphQL
 
       attr_config subscription_expiration_seconds: nil
       attr_config use_redis_object_on_cleanup: true
+      attr_config handle_legacy_subscriptions: false
     end
   end
 end

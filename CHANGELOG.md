@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.0.0 - 2021-04-01
+
+### Added
+
+ - Support for [Subscriptions Broadcast](https://graphql-ruby.org/subscriptions/broadcast.html) feature in GraphQL-Ruby 1.11+. [@Envek] ([#15](https://github.com/anycable/graphql-anycable/pull/15))
+
+### Changed
+
+ - Subscription data storage format changed to support broadcasting feature (see [#15](https://github.com/anycable/graphql-anycable/pull/15))
+
 ### Removed
 
  - Drop support for GraphQL-Ruby before 1.11
@@ -16,6 +26,30 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
  - Drop `:action_cable_stream` option from context: it is not used in reality.
 
    See [rmosolgo/graphql-ruby#3076](https://github.com/rmosolgo/graphql-ruby/pull/3076) for details
+
+### Upgrading notes
+
+ 1. Change method of plugging in of this gem from `use GraphQL::Subscriptions::AnyCableSubscriptions` to `use GraphQL::AnyCable`:
+
+    ```ruby
+    use GraphQL::AnyCable
+    ```
+
+    If you need broadcasting, add `broadcast: true` option and ensure that [Interpreter mode](https://graphql-ruby.org/queries/interpreter.html) is enabled.
+
+    ```ruby
+    use GraphQL::Execution::Interpreter
+    use GraphQL::Analysis::AST
+    use GraphQL::AnyCable, broadcast: true, default_broadcastable: true
+    ```
+
+ 2. Enable `handle_legacy_subscriptions` setting for seamless upgrade from previous versions:
+
+    ```sh
+    GRAPHQL_ANYCABLE_HANDLE_LEGACY_SUBSCRIPTIONS=true
+    ```
+
+    Disable or remove this setting when you sure that all clients has re-subscribed (e.g. after `subscription_expiration_seconds` has passed after upgrade) as it imposes small performance penalty.
 
 ## 0.5.0 - 2020-08-26
 

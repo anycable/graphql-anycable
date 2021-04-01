@@ -51,7 +51,7 @@ Or install it yourself as:
  
     ```ruby
     class MySchema < GraphQL::Schema
-      use GraphQL::AnyCable
+      use GraphQL::AnyCable, broadcast: true
     
       subscription SubscriptionType
     end
@@ -100,6 +100,28 @@ Or install it yourself as:
     MySchema.subscriptions.trigger(:product_updated, {}, Product.first!, scope: account.id)
     ```
 
+## Broadcasting
+
+By default, graphql-anycable evaluates queries and transmits results for every subscription client individually. Of course, it is a waste of resources if you have hundreds or thousands clients subscribed to the same data (and has huge negative impact on performance).
+
+Thankfully, GraphQL-Ruby has added [Subscriptions Broadcast](https://graphql-ruby.org/subscriptions/broadcast.html) feature that allows to group exact same subscriptions, execute them and transmit results only once.
+
+To enable this feature, turn on [Interpreter](https://graphql-ruby.org/queries/interpreter.html) and pass `broadcast` option set to `true` to graphql-anycable.
+
+By default all fields are marked as _not safe for broadcasting_. If a subscription has at least one non-broadcastable field in its query, GraphQL-Ruby will execute every subscription for every client independently. If you sure that all your fields are safe to be broadcasted, you can pass `default_broadcastable` option set to `true` (but be aware that it can have security impllications!)
+
+```ruby
+class MySchema < GraphQL::Schema
+  use GraphQL::Execution::Interpreter # Required for graphql-ruby before 1.12.4
+  use GraphQL::Analysis::AST
+  use GraphQL::AnyCable, broadcast: true, default_broadcastable: true
+
+  subscription SubscriptionType
+end
+```
+
+See GraphQL-Ruby [broadcasting docs](https://graphql-ruby.org/subscriptions/broadcast.html) for more details.
+
 ## Operations
 
 To avoid filling Redis storage with stale subscription data:
@@ -119,6 +141,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     ```.env
     GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS=604800
     GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP=true
+    GRAPHQL_ANYCABLE_HANDLE_LEGACY_SUBSCRIPTIONS=false
     ```
 
  2. YAML configuration files:
@@ -128,6 +151,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     production:
       subscription_expiration_seconds: 300 # 5 minutes
       use_redis_object_on_cleanup: false # For restricted redis installations
+      handle_legacy_subscriptions: false # For seamless upgrade from pre-1.0 versions
     ```
 
  3. Configuration from your application code:
@@ -144,37 +168,44 @@ And any other way provided by [anyway_config]. Check its documentation!
 
 As in AnyCable there is no place to store subscription data in-memory, it should be persisted somewhere to be retrieved on `GraphQLSchema.subscriptions.trigger` and sent to subscribed clients. `graphql-anycable` uses the same Redis database as AnyCable itself.
 
- 1. Event subscriptions: `graphql-event:#{event.topic}` set containing identifiers for all subscriptions for given operation with certain context and arguments (serialized in _topic_). Used to find all subscriptions on `GraphQLSchema.subscriptions.trigger`.
+ 1. Grouped event subscriptions: `graphql-fingerprints:#{event.topic}` sorted set. Used to find all subscriptions on `GraphQLSchema.subscriptions.trigger`.
 
     ```
-    SMEMBERS graphql-event:1:myStats:
+    ZREVRANGE graphql-fingerprints:1:myStats: 0 -1
+    => 1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o=
+    ```
+
+ 2. Event subscriptions: `graphql-subscriptions:#{event.fingerptint}` set containing identifiers for all subscriptions for given operation with certain context and arguments (serialized in _topic_). Fingerprints are already scoped by topic.
+
+    ```
+    SMEMBERS graphql-subscriptions:1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o=
     => 52ee8d65-275e-4d22-94af-313129116388
     ```
 
- 2. Subscription data: `graphql-subscription:#{subscription_id}` hash contains everything required to evaluate subscription on trigger and create data for client.
+    > For backward compatibility with pre-1.0 versions of this gem older `graphql-event:#{event.topic}` set containing subscription identifiers is also supported.
+    >
+    > ```
+    > SMEMBERS graphql-event:1:myStats:
+    > => 52ee8d65-275e-4d22-94af-313129116388
+    > ```
+
+ 3. Subscription data: `graphql-subscription:#{subscription_id}` hash contains everything required to evaluate subscription on trigger and create data for client.
 
     ```
     HGETALL graphql-subscription:52ee8d65-275e-4d22-94af-313129116388
     => {
-      context:        '{"user_id":1,"user":{"__gid__":"Z2lkOi8vZWJheS1tYWcyL1VzZXIvMQ"},"subscription_id":"52ee8d65-275e-4d22-94af-313129116388"}',
+      context:        '{"user_id":1,"user":{"__gid__":"Z2lkOi8vZWJheS1tYWcyL1VzZXIvMQ"}}',
       variables:      '{}',
       operation_name: 'MyStats'
       query_string:   'subscription MyStats { myStatsUpdated { completed total processed __typename } }',
     }
     ```
 
- 3. Channel subscriptions: `graphql-channel:#{channel_id}` set containing identifiers for subscriptions created in ActionCable channel to delete them on client disconnect.
+ 4. Channel subscriptions: `graphql-channel:#{channel_id}` set containing identifiers for subscriptions created in ActionCable channel to delete them on client disconnect.
 
     ```
     SMEMBERS graphql-channel:17420c6ed9e
     => 52ee8d65-275e-4d22-94af-313129116388
-    ```
-
- 4. Subscription events: `graphql-subscription-events:#{subscription_id}` set containing event topics to delete subscription identifier from event subscriptions set on unsubscribe (or client disconnect).
-
-    ```
-    SMEMBERS graphql-subscription-events:52ee8d65-275e-4d22-94af-313129116388
-    => 1:myStats:
     ```
 
 ## Development
