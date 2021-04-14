@@ -112,4 +112,28 @@ RSpec.describe GraphQL::AnyCable do
       expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
     end
   end
+
+  describe "with missing channel instance in execution context" do
+    subject do
+      AnycableSchema.execute(
+        query: query,
+        context: {}, # Intentionally left blank
+        variables: {},
+        operation_name: "SomeSubscription",
+      )
+    end
+
+    let(:query) do
+      <<~GRAPHQL
+        subscription SomeSubscription { productUpdated { id } }
+      GRAPHQL
+    end
+
+    it "raises configuration error" do
+      expect { subject }.to raise_error(
+        GraphQL::AnyCable::ChannelConfigurationError,
+        /ActionCable channel wasn't provided in the context for GraphQL query execution!/,
+      )
+    end
+  end
 end

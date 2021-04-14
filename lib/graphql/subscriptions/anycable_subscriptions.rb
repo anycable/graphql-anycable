@@ -2,6 +2,7 @@
 
 require "anycable"
 require "graphql/subscriptions"
+require "graphql/anycable/errors"
 
 # rubocop: disable Metrics/AbcSize, Metrics/LineLength, Metrics/MethodLength
 
@@ -139,6 +140,8 @@ module GraphQL
         context = query.context.to_h
         subscription_id = context.delete(:subscription_id) || build_id
         channel = context.delete(:channel)
+
+        raise GraphQL::AnyCable::ChannelConfigurationError unless channel
 
         events.each do |event|
           channel.stream_from(SUBSCRIPTIONS_PREFIX + event.fingerprint)

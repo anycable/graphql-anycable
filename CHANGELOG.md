@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Added
+
+ - Guard check for presence of ActionCable channel instance in the GraphQL execution context.
+
+   This allows to detect wrong configuration (user forgot to pass channel into context) or wrong usage (subscription query was sent via HTTP request, not via WebSocket channel) of the library and provides clear error message to gem users.
+
 ## 1.0.0 - 2021-04-01
 
 ### Added
