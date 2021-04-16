@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.0.1 - 2021-04-16
+
 ### Added
 
  - Guard check for presence of ActionCable channel instance in the GraphQL execution context.
