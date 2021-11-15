@@ -45,8 +45,7 @@ require "graphql/anycable/errors"
 #     end
 #
 #     def unsubscribed
-#       channel_id = params.fetch("channelId")
-#       MySchema.subscriptions.delete_channel_subscriptions(channel_id)
+#       MySchema.subscriptions.delete_channel_subscriptions(self)
 #     end
 #   end
 #
@@ -143,6 +142,12 @@ module GraphQL
 
         raise GraphQL::AnyCable::ChannelConfigurationError unless channel
 
+        channel_uniq_id = config.use_client_provided_uniq_id? ? channel.params["channelId"] : subscription_id
+
+        # Store subscription_id in the channel state to cleanup on disconnect
+        write_subscription_id(channel, channel_uniq_id)
+
+
         events.each do |event|
           channel.stream_from(SUBSCRIPTIONS_PREFIX + event.fingerprint)
         end
@@ -156,14 +161,14 @@ module GraphQL
         }
 
         redis.multi do
-          redis.sadd(CHANNEL_PREFIX + channel.params["channelId"], subscription_id)
+          redis.sadd(CHANNEL_PREFIX + channel_uniq_id, subscription_id)
           redis.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, data)
           events.each do |event|
             redis.zincrby(FINGERPRINTS_PREFIX + event.topic, 1, event.fingerprint)
             redis.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, subscription_id)
           end
           next unless config.subscription_expiration_seconds
-          redis.expire(CHANNEL_PREFIX + channel.params["channelId"], config.subscription_expiration_seconds)
+          redis.expire(CHANNEL_PREFIX + channel_uniq_id, config.subscription_expiration_seconds)
           redis.expire(SUBSCRIPTION_PREFIX + subscription_id, config.subscription_expiration_seconds)
         end
       end
@@ -217,7 +222,9 @@ module GraphQL
       end
 
       # The channel was closed, forget about it and its subscriptions
-      def delete_channel_subscriptions(channel_id)
+      def delete_channel_subscriptions(channel_or_id)
+        # For backward compatibility
+        channel_id = channel_or_id.is_a?(String) ? channel_or_id : read_subscription_id(channel_or_id)
         redis.smembers(CHANNEL_PREFIX + channel_id).each do |subscription_id|
           delete_subscription(subscription_id)
         end
@@ -228,6 +235,17 @@ module GraphQL
 
       def anycable
         @anycable ||= ::AnyCable.broadcast_adapter
+      end
+
+      def read_subscription_id(channel)
+        return channel.instance_variable_get(:@__sid__) if channel.instance_variable_defined?(:@__sid__)
+
+        channel.instance_variable_set(:@__sid__, channel.connection.socket.istate["sid"])
+      end
+
+      def write_subscription_id(channel, val)
+        channel.connection.socket.istate["sid"] = val
+        channel.instance_variable_set(:@__sid__, val)
       end
     end
   end

@@ -77,8 +77,7 @@ Or install it yourself as:
       end
     
       def unsubscribed
-        channel_id = params.fetch("channelId")
-        MySchema.subscriptions.delete_channel_subscriptions(channel_id)
+        MySchema.subscriptions.delete_channel_subscriptions(self)
       end
     
       private
