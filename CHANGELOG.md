@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.1.0 - 2021-11-17
+
 ### Added
 
 - Support for generating unique channel IDs server-side and storing them in the channel states.
