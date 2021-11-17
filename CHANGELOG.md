@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Added
+
+- Support for generating unique channel IDs server-side and storing them in the channel states.
+
+  Currently, we rely on `params["channelId"]` to track subscriptions. This value is random when using `graphql-ruby` JS client, but is not guaranteed to be random in general.
+
+  Now you can opt-in to use server-side IDs by specifying `use_client_provided_uniq_id: false` in YAML config or thru the `GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID=false` env var.
+
+  NOTE: Relying on client-side IDs is deprecated and will be removed in the future versions.
+
+  You must also update your cleanup code in the `Channel#unsubscribed`:
+
+```diff
+-        channel_id = params.fetch("channelId")
+-        MySchema.subscriptions.delete_channel_subscriptions(channel_id)
++        MySchema.subscriptions.delete_channel_subscriptions(self)
+```
+
 ## 1.0.1 - 2021-04-16
 
 ### Added
