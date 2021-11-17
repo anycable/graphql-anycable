@@ -18,19 +18,19 @@ jobs:
         include:
           - ruby: "3.0"
             graphql: '~> 1.12.0'
-            anycable: '~> 1.0.0'
+            anycable: '~> 1.1.0'
             interpreter: yes
           - ruby: "3.0"
             graphql: '~> 1.12.0'
-            anycable: '~> 1.0.0'
+            anycable: '~> 1.1.0'
             interpreter: no
           - ruby: 2.7
             graphql: '~> 1.12.0'
-            anycable: '~> 1.0.0'
+            anycable: '~> 1.1.0'
             interpreter: yes
           - ruby: 2.7
             graphql: '~> 1.12.0'
-            anycable: '~> 1.0.0'
+            anycable: '~> 1.1.0'
             interpreter: no
           - ruby: 2.6
             graphql: '~> 1.11.0'
