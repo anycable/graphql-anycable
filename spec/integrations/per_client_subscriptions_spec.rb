@@ -34,6 +34,7 @@ RSpec.describe "non-broadcastable subscriptions" do
       expect(subject.transmissions.size).to eq 1
       expect(subject.transmissions.first).to eq({result: {data: nil}, more: true}.to_json)
       expect(subject.streams.size).to eq 1
+      expect(subject.istate["sid"]).not_to be_nil
     end
 
     specify "creates uniq stream for each subscription" do

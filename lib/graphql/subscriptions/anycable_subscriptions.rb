@@ -244,7 +244,16 @@ module GraphQL
       def read_subscription_id(channel)
         return channel.instance_variable_get(:@__sid__) if channel.instance_variable_defined?(:@__sid__)
 
-        channel.instance_variable_set(:@__sid__, channel.connection.socket.istate&.[]("sid"))
+        return unless channel.connection.socket.istate
+
+        istate =
+          if channel.connection.socket.istate[channel.identifier]
+            JSON.parse(channel.connection.socket.istate[channel.identifier])
+          else
+            channel.connection.socket.istate
+          end
+
+        channel.instance_variable_set(:@__sid__, istate["sid"])
       end
 
       def write_subscription_id(channel, val)

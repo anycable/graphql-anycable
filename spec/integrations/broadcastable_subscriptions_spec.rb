@@ -35,6 +35,7 @@ RSpec.describe "broadcastable subscriptions" do
       expect(subject.transmissions.size).to eq 1
       expect(subject.transmissions.first).to eq({result: {data: nil}, more: true}.to_json)
       expect(subject.streams.size).to eq 1
+      expect(subject.istate["sid"]).not_to be_nil
     end
 
     specify "streams depends only on query params and the same for equal subscriptions" do
@@ -64,7 +65,6 @@ RSpec.describe "broadcastable subscriptions" do
 
   describe "unsubscribe" do
     let(:redis) { AnycableSchema.subscriptions.redis }
-    let(:config) { GraphQL::AnyCable.config }
 
     specify "removes subscription from the store" do
       # first, subscribe to obtain the connection state
@@ -83,6 +83,27 @@ RSpec.describe "broadcastable subscriptions" do
       expect(response).to be_success
 
       expect(redis.keys("graphql-subscription:*").size).to eq(0)
+    end
+
+    context "with nested istate" do
+      specify "removes subscription from the store" do
+        # first, subscribe to obtain the connection state
+        subscribe_response = handler.handle(:command, request)
+        expect(subscribe_response).to be_success
+  
+        expect(redis.keys("graphql-subscription:*").size).to eq(1)
+  
+        istate = subscribe_response.istate
+  
+        request.command = "unsubscribe"
+        request.data = ""
+        request.istate[channel_id] = istate.to_h.to_json
+  
+        response = handler.handle(:command, request)
+        expect(response).to be_success
+  
+        expect(redis.keys("graphql-subscription:*").size).to eq(0)
+      end
     end
 
     specify "creates single entry for similar subscriptions" do
