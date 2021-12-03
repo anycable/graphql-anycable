@@ -225,6 +225,10 @@ module GraphQL
       def delete_channel_subscriptions(channel_or_id)
         # For backward compatibility
         channel_id = channel_or_id.is_a?(String) ? channel_or_id : read_subscription_id(channel_or_id)
+
+        # Missing in case disconnect happens before #execute
+        return unless channel_id
+
         redis.smembers(CHANNEL_PREFIX + channel_id).each do |subscription_id|
           delete_subscription(subscription_id)
         end
@@ -240,7 +244,7 @@ module GraphQL
       def read_subscription_id(channel)
         return channel.instance_variable_get(:@__sid__) if channel.instance_variable_defined?(:@__sid__)
 
-        channel.instance_variable_set(:@__sid__, channel.connection.socket.istate["sid"])
+        channel.instance_variable_set(:@__sid__, channel.connection.socket.istate&.[]("sid"))
       end
 
       def write_subscription_id(channel, val)
