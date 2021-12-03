@@ -144,7 +144,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID=false
     ```
 
- 2. YAML configuration files:
+ 2. YAML configuration files (this is **config/graphql_anycable.yml**, *not* **config/anycable.yml**):
 
     ```yaml
     # config/graphql_anycable.yml
