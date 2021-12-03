@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    name: "GraphQL-Ruby ${{ matrix.graphql }} (interpreter: ${{ matrix.interpreter }}) with AnyCable ${{ matrix.anycable }} on Ruby ${{ matrix.ruby }}"
+    name: "GraphQL-Ruby ${{ matrix.graphql }} (interpreter: ${{ matrix.interpreter }}, use_client_id: ${{ matrix.client_id }}) on Ruby ${{ matrix.ruby }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -18,42 +18,22 @@ jobs:
         include:
           - ruby: "3.0"
             graphql: '~> 1.12.0'
-            anycable: '~> 1.1.0'
-            interpreter: yes
-          - ruby: "3.0"
-            graphql: '~> 1.12.0'
-            anycable: '~> 1.1.0'
-            interpreter: no
-          - ruby: 2.7
-            graphql: '~> 1.12.0'
-            anycable: '~> 1.1.0'
+            client_id: 'false'
             interpreter: yes
           - ruby: 2.7
             graphql: '~> 1.12.0'
-            anycable: '~> 1.1.0'
-            interpreter: no
-          - ruby: 2.6
-            graphql: '~> 1.11.0'
-            anycable: '~> 1.0.0'
+            client_id: 'false'
             interpreter: yes
           - ruby: 2.6
             graphql: '~> 1.11.0'
-            anycable: '~> 1.0.0'
-            interpreter: no
-          - ruby: 2.5
-            graphql: '~> 1.11.0'
-            anycable: '~> 1.0.0'
-            interpreter: yes
-          - ruby: 2.5
-            graphql: '~> 1.11.0'
-            anycable: '~> 1.0.0'
+            client_id: 'true'
             interpreter: no
     container:
       image: ruby:${{ matrix.ruby }}
       env:
         CI: true
         GRAPHQL_RUBY_VERSION: ${{ matrix.graphql }}
-        ANYCABLE_VERSION: ${{ matrix.anycable }}
+        GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID: ${{ matrix.client_id }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
