@@ -90,6 +90,11 @@ end
 
 AnyCable.connection_factory = ->(socket, **options) { FakeConnection.new(socket, **options) }
 
+# Add verbose logging to exceptions
+AnyCable.capture_exception do |ex, method, message|
+  $stdout.puts "RPC ##{method} failed: #{message}\n#{ex}\n#{ex.backtrace.take(5).join("\n")}"
+end
+
 RSpec.configure do |config|
   config.define_derived_metadata(file_path: %r{spec/integrations/}) do |metadata|
     metadata[:integration] = true
