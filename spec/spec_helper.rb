@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-ENV["GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID"] = "false"
+ENV["GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID"] ||= "false"
 
 require "bundler/setup"
 require "graphql/anycable"
@@ -11,7 +11,7 @@ require "yaml"
 TESTING_GRAPHQL_RUBY_INTERPRETER =
   begin
     env_value = ENV["GRAPHQL_RUBY_INTERPRETER"]
-    env_value ? YAML.safe_load(env_value) : false
+    env_value ? YAML.safe_load(env_value) : true
   end
 
 require_relative "support/graphql_schema"
@@ -23,6 +23,9 @@ RSpec.configure do |config|
 
   # Disable RSpec exposing methods globally on `Module` and `main`
   config.disable_monkey_patching!
+
+  config.filter_run :focus
+  config.run_all_when_everything_filtered = true
 
   config.expect_with :rspec do |c|
     c.syntax = :expect

@@ -91,12 +91,20 @@ RSpec.describe GraphQL::AnyCable do
 
   describe ".delete_channel_subscriptions" do
     before do
+      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
+    end
+
+    before do
       AnycableSchema.execute(
         query: query,
         context: { channel: channel, subscription_id: subscription_id },
         variables: {},
         operation_name: "SomeSubscription",
       )
+    end
+
+    after do
+      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
     end
 
     let(:redis) { AnycableSchema.subscriptions.redis }
