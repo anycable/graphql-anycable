@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.1.1 - 2021-12-06
+
+### Fixed
+
+- Handling of buggy istate values on unsubscribe (when `use_client_provided_uniq_id: false`). [@palkan] [#20](https://github.com/anycable/graphql-anycable/pull/20)
+- A bug when `#unsubscribe` happens before `#execute`. [@palkan] [#20](https://github.com/anycable/graphql-anycable/pull/20)
+
 ## 1.1.0 - 2021-11-17
 
 ### Added
@@ -142,3 +149,4 @@ Initial version: store subscriptions on redis, re-execute queries in sync. [@Env
 [@bibendi]: https://github.com/bibendi "Misha Merkushin"
 [@FX-HAO]: https://github.com/FX-HAO "Fuxin Hao"
 [@Envek]: https://github.com/Envek "Andrey Novikov"
+[@palkan]: https://github.com/palkan "Vladimir Dementyev"
