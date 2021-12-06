@@ -9,7 +9,7 @@ gemspec
 
 gem "graphql",  ENV.fetch("GRAPHQL_RUBY_VERSION", "~> 1.12")
 gem "anycable", ENV.fetch("ANYCABLE_VERSION", "~> 1.0")
-gem "anycable-rails", github: "anycable/anycable-rails"
+gem "anycable-rails", ENV.fetch("ANYCABLE_VERSION", "~> 1.0"), require: false
 
 group :development, :test do
   gem "pry"
