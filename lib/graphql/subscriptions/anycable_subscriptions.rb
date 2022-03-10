@@ -252,7 +252,7 @@ module GraphQL
       end
 
       def write_subscription_id(channel, val)
-        channel.connection.socket.istate["sid"] = val
+        channel.connection.anycable_socket.istate["sid"] = val
         channel.instance_variable_set(:@__sid__, val)
       end
 
