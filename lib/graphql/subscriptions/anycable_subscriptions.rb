@@ -79,9 +79,9 @@ module GraphQL
         return if fingerprints.empty?
 
         fingerprint_subscription_ids = Hash[fingerprints.zip(
-          redis.pipelined do
+          redis.pipelined do |pipeline|
             fingerprints.map do |fingerprint|
-              redis.smembers(SUBSCRIPTIONS_PREFIX + fingerprint)
+              pipeline.smembers(SUBSCRIPTIONS_PREFIX + fingerprint)
             end
           end
         )]
@@ -160,16 +160,16 @@ module GraphQL
           events: events.map { |e| [e.topic, e.fingerprint] }.to_h.to_json,
         }
 
-        redis.multi do
-          redis.sadd(CHANNEL_PREFIX + channel_uniq_id, subscription_id)
-          redis.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, data)
+        redis.multi do |pipeline|
+          pipeline.sadd(CHANNEL_PREFIX + channel_uniq_id, subscription_id)
+          pipeline.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, data)
           events.each do |event|
-            redis.zincrby(FINGERPRINTS_PREFIX + event.topic, 1, event.fingerprint)
-            redis.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, subscription_id)
+            pipeline.zincrby(FINGERPRINTS_PREFIX + event.topic, 1, event.fingerprint)
+            pipeline.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, subscription_id)
           end
           next unless config.subscription_expiration_seconds
-          redis.expire(CHANNEL_PREFIX + channel_uniq_id, config.subscription_expiration_seconds)
-          redis.expire(SUBSCRIPTION_PREFIX + subscription_id, config.subscription_expiration_seconds)
+          pipeline.expire(CHANNEL_PREFIX + channel_uniq_id, config.subscription_expiration_seconds)
+          pipeline.expire(SUBSCRIPTION_PREFIX + subscription_id, config.subscription_expiration_seconds)
         end
       end
 
@@ -191,19 +191,19 @@ module GraphQL
         events = redis.hget(SUBSCRIPTION_PREFIX + subscription_id, :events)
         events = events ? JSON.parse(events) : {}
         fingerprint_subscriptions = {}
-        redis.pipelined do
+        redis.pipelined do |pipeline|
           events.each do |topic, fingerprint|
-            redis.srem(SUBSCRIPTIONS_PREFIX + fingerprint, subscription_id)
-            score = redis.zincrby(FINGERPRINTS_PREFIX + topic, -1, fingerprint)
+            pipeline.srem(SUBSCRIPTIONS_PREFIX + fingerprint, subscription_id)
+            score = pipeline.zincrby(FINGERPRINTS_PREFIX + topic, -1, fingerprint)
             fingerprint_subscriptions[FINGERPRINTS_PREFIX + topic] = score
           end
           # Delete subscription itself
-          redis.del(SUBSCRIPTION_PREFIX + subscription_id)
+          pipeline.del(SUBSCRIPTION_PREFIX + subscription_id)
         end
         # Clean up fingerprints that doesn't have any subscriptions left
-        redis.pipelined do
+        redis.pipelined do |pipeline|
           fingerprint_subscriptions.each do |key, score|
-            redis.zremrangebyscore(key, '-inf', '0') if score.value.zero?
+            pipeline.zremrangebyscore(key, '-inf', '0') if score.value.zero?
           end
         end
         delete_legacy_subscription(subscription_id)
