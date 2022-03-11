@@ -10,8 +10,7 @@ RSpec.shared_context "rpc" do
   let(:schema) { nil }
   let(:identifiers) { {current_user: "john", schema: schema.to_s} }
   let(:channel_class) { "GraphqlChannel" }
-  let(:channel_params) { {channelId: rand(1000).to_s} }
-  let(:channel_identifier) { {channel: channel_class}.merge(channel_params) }
+  let(:channel_identifier) { {channel: channel_class} }
   let(:channel_id) { channel_identifier.to_json }
 
   let(:handler) { AnyCable::RPC::Handler.new }
