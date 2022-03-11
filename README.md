@@ -215,6 +215,39 @@ After checking out the repo, run `bin/setup` to install dependencies. Then, run 
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 
+### Releasing new versions
+
+1. Bump version number in `lib/graphql/anycable/version.rb`
+
+   In case of pre-releases keep in mind [rubygems/rubygems#3086](https://github.com/rubygems/rubygems/issues/3086) and check version with command like `Gem::Version.new(AfterCommitEverywhere::VERSION).to_s`
+
+2. Fill `CHANGELOG.md` with missing changes, add header with version and date.
+
+3. Make a commit:
+
+   ```sh
+   git add lib/graphql/anycable/version.rb CHANGELOG.md
+   version=$(ruby -r ./lib/graphql/anycable/version.rb -e "puts Gem::Version.new(GraphQL::AnyCable::VERSION)")
+   git commit --message="${version}: " --edit
+   ```
+
+4. Create annotated tag:
+
+   ```sh
+   git tag v${version} --annotate --message="${version}: " --edit --sign
+   ```
+
+5. Fill version name into subject line and (optionally) some description (list of changes will be taken from `CHANGELOG.md` and appended automatically)
+
+6. Push it:
+
+   ```sh
+   git push --follow-tags
+   ```
+
+7. GitHub Actions will create a new release, build and push gem into [rubygems.org](https://rubygems.org)! You're done!
+
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/Envek/graphql-anycable.
