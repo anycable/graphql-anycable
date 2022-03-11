@@ -111,8 +111,8 @@ By default all fields are marked as _not safe for broadcasting_. If a subscripti
 
 ```ruby
 class MySchema < GraphQL::Schema
-  use GraphQL::Execution::Interpreter # Required for graphql-ruby before 1.12.4
-  use GraphQL::Analysis::AST
+  use GraphQL::Execution::Interpreter # Required for graphql-ruby before 1.12. Remove it when upgrading to 2.0
+  use GraphQL::Analysis::AST # Required for graphql-ruby before 1.12. Remove it when upgrading to 2.0
   use GraphQL::AnyCable, broadcast: true, default_broadcastable: true
 
   subscription SubscriptionType

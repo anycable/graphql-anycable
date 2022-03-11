@@ -28,7 +28,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "anycable",      "~> 1.0"
   spec.add_dependency "anyway_config", ">= 1.3", "< 3"
-  spec.add_dependency "graphql",       "~> 1.11"
+  spec.add_dependency "graphql",       ">= 1.11", "< 3"
   spec.add_dependency "redis",         ">= 4.2.0"
 
   spec.add_development_dependency "anycable-rails"
