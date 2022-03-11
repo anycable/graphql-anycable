@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.1.2 - 2022-03-11
+
+### Fixed
+
+- AnyCable 1.3.0 compatibility. [@palkan] [#21](https://github.com/anycable/graphql-anycable/pull/21)
+- Redis.rb 5.0 compatibility. [@palkan] [#21](https://github.com/anycable/graphql-anycable/pull/21)
+
 ## 1.1.1 - 2021-12-06
 
 ### Fixed
