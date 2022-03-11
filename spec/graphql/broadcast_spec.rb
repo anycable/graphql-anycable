@@ -14,7 +14,7 @@ RSpec.describe "Broadcasting" do
 
   let(:channel) do
     socket = double("Socket", istate: AnyCable::Socket::State.new({}))
-    connection = double("Connection", socket: socket)
+    connection = double("Connection", anycable_socket: socket)
     double("Channel", connection: connection)
   end
 

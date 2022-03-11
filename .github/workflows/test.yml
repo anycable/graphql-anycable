@@ -20,19 +20,23 @@ jobs:
             graphql: '~> 1.12.0'
             client_id: 'false'
             interpreter: yes
+            anycable_rails: '~> 1.2'
           - ruby: 2.7
             graphql: '~> 1.12.0'
             client_id: 'false'
             interpreter: yes
+            anycable_rails: '~> 1.2.0'
           - ruby: 2.6
             graphql: '~> 1.11.0'
             client_id: 'true'
             interpreter: no
+            anycable_rails: '~> 1.0'
     container:
       image: ruby:${{ matrix.ruby }}
       env:
         CI: true
         GRAPHQL_RUBY_VERSION: ${{ matrix.graphql }}
+        ANYCABLE_RAILS_VERSION: ${{ matrix.anycable_rails }}
         GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID: ${{ matrix.client_id }}
     steps:
       - uses: actions/checkout@v2

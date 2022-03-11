@@ -4,6 +4,7 @@ return unless TESTING_GRAPHQL_RUBY_INTERPRETER # Broadcast requires interpreter
 
 require "integration_helper"
 require "rails"
+require "action_cable/engine"
 
 # Stub Rails.root for Anyway Config
 module Rails
@@ -13,12 +14,15 @@ module Rails
 end
 
 require "anycable-rails"
-require "anycable/rails/channel_state"
-require "anycable/rails/actioncable/connection"
 
 # Load server to trigger load hooks
 require "action_cable/server"
 require "action_cable/server/base"
+# Only for anycable-rails <1.3.0
+unless defined?(::AnyCable::Rails::Connection)
+  require "anycable/rails/channel_state"
+  require "anycable/rails/actioncable/connection"
+end
 
 module ApplicationCable
   class Connection < ActionCable::Connection::Base
@@ -68,9 +72,16 @@ RSpec.describe "Rails integration" do
   let(:schema) { BroadcastSchema }
   let(:channel_class) { "ApplicationCable::GraphqlChannel" }
 
-  before do
-    allow(AnyCable).to receive(:connection_factory)
-      .and_return(->(socket, **options) { ApplicationCable::Connection.call(socket, **options) })
+  if defined?(::AnyCable::Rails::Connection)
+    before do
+      allow(AnyCable).to receive(:connection_factory)
+        .and_return(->(socket, **options) { ::AnyCable::Rails::Connection.new(ApplicationCable::Connection, socket, **options) })
+    end
+  else
+    before do
+      allow(AnyCable).to receive(:connection_factory)
+        .and_return(->(socket, **options) { ApplicationCable::Connection.call(socket, **options) })
+    end
   end
 
   let(:variables) { {id: "a"} }
