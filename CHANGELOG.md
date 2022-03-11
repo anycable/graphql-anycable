@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.1.3 - 2022-03-11
+
+### Changed
+
+- Allow using graphql-anycable with GraphQL-Ruby 2.x (it seem to be already compatible). [@Envek]
+
 ## 1.1.2 - 2022-03-11
 
 ### Fixed
