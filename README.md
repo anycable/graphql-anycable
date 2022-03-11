@@ -140,7 +140,6 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     ```.env
     GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS=604800
     GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP=true
-    GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID=false
     ```
 
  2. YAML configuration files (note that this is `config/graphql_anycable.yml`, *not* `config/anycable.yml`):
@@ -150,7 +149,6 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     production:
       subscription_expiration_seconds: 300 # 5 minutes
       use_redis_object_on_cleanup: false # For restricted redis installations
-      use_client_provided_uniq_id: false # To avoid problems with non-uniqueness of Apollo channel identifiers
     ```
 
  3. Configuration from your application code:
@@ -193,7 +191,7 @@ As in AnyCable there is no place to store subscription data in-memory, it should
     }
     ```
 
- 4. Channel subscriptions: `graphql-channel:#{channel_id}` set containing identifiers for subscriptions created in ActionCable channel to delete them on client disconnect.
+ 4. Channel subscriptions: `graphql-channel:#{subscription_id}` set containing identifiers for subscriptions created in ActionCable channel to delete them on client disconnect.
 
     ```
     SMEMBERS graphql-channel:17420c6ed9e

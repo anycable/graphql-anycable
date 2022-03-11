@@ -117,9 +117,8 @@ RSpec.describe "Rails integration" do
 
     request_2 = request.dup
 
-    # update request context and channelId
+    # update request context
     request_2.connection_identifiers = identifiers.merge(current_user: "alice").to_json
-    request_2.identifier = channel_identifier.merge(channelId: rand(1000).to_s).to_json
 
     response_2 = handler.handle(:command, request_2)
 

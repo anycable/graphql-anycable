@@ -25,7 +25,7 @@ RSpec.describe GraphQL::AnyCable do
   let(:channel) do
     socket = double("Socket", istate: AnyCable::Socket::State.new({}))
     connection = double("Connection", anycable_socket: socket)
-    double("Channel", id: "legacy_id", params: { "channelId" => "legacy_id" }, stream_from: nil, connection: connection)
+    double("Channel", stream_from: nil, connection: connection)
   end
 
   let(:anycable) { AnyCable.broadcast_adapter }
@@ -91,20 +91,12 @@ RSpec.describe GraphQL::AnyCable do
 
   describe ".delete_channel_subscriptions" do
     before do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
-    end
-
-    before do
       AnycableSchema.execute(
         query: query,
         context: { channel: channel, subscription_id: subscription_id },
         variables: {},
         operation_name: "SomeSubscription",
       )
-    end
-
-    after do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
     end
 
     let(:redis) { AnycableSchema.subscriptions.redis }
@@ -119,41 +111,6 @@ RSpec.describe GraphQL::AnyCable do
       expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be true
       subject
       expect(redis.exists?("graphql-channel:some-truly-random-number")).to be false
-      expect(redis.zcard("graphql-fingerprints::productUpdated:")).to be_zero # Seems to be fakeredis bug
-      expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
-    end
-  end
-
-  describe "legacy .delete_channel_subscriptions" do
-    before do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = true
-    end
-
-    before do
-      AnycableSchema.execute(
-        query: query,
-        context: { channel: channel, subscription_id: subscription_id },
-        variables: {},
-        operation_name: "SomeSubscription",
-      )
-    end
-
-    after do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
-    end
-
-    let(:redis) { AnycableSchema.subscriptions.redis }
-
-    subject do
-      AnycableSchema.subscriptions.delete_channel_subscriptions(channel.id)
-    end
-
-    it "removes subscription from redis" do
-      expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be true
-      expect(redis.exists?("graphql-channel:legacy_id")).to be true
-      expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be true
-      subject
-      expect(redis.exists?("graphql-channel:legacy_id")).to be false
       expect(redis.zcard("graphql-fingerprints::productUpdated:")).to be_zero # Seems to be fakeredis bug
       expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
     end

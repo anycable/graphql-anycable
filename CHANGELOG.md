@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 
+- Handling of client-provided channel identifiers. **BREAKING CHANGE**
+
+  Please make sure that you have changed your channel `disconnected` method to pass channel instance to GraphQL-AnyCable's `delete_channel_subscriptions` method.
+  See [release notes for version 1.1.0](https://github.com/anycable/graphql-anycable/releases/tag/v1.1.0) for details.
+
 - Handling of pre-1.0 subscriptions data.
 
   If you're still using version 0.5 or below, please upgrade to 1.0 or 1.1 first with `handle_legacy_subscriptions` setting enabled.
