@@ -18,11 +18,6 @@ namespace :graphql do
         GraphQL::AnyCable::Cleaner.clean_subscriptions
       end
 
-      # Clean up legacy subscription_ids from events for expired subscriptions
-      task :events do
-        GraphQL::AnyCable::Cleaner.clean_events
-      end
-
       # Clean up subscription_ids from event fingerprints for expired subscriptions
       task :fingerprint_subscriptions do
         GraphQL::AnyCable::Cleaner.clean_fingerprint_subscriptions

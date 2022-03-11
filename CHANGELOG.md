@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Removed
+
+- Handling of pre-1.0 subscriptions data.
+
+  If you're still using version 0.5 or below, please upgrade to 1.0 or 1.1 first with `handle_legacy_subscriptions` setting enabled.
+  See [release notes for version 1.0.0](https://github.com/anycable/graphql-anycable/releases/tag/v1.0.0) for details.
+
 ## 1.1.3 - 2022-03-11
 
 ### Changed

@@ -60,9 +60,6 @@ module GraphQL
       FINGERPRINTS_PREFIX  = "graphql-fingerprints:"  # ZSET: To get fingerprints by topic
       SUBSCRIPTIONS_PREFIX = "graphql-subscriptions:" # SET:  To get subscriptions by fingerprint
       CHANNEL_PREFIX       = "graphql-channel:"       # SET:  Auxiliary structure for whole channel's subscriptions cleanup
-      # For backward compatibility:
-      EVENT_PREFIX = "graphql-event:"
-      SUBSCRIPTION_EVENTS_PREFIX = "graphql-subscription-events:"
 
       # @param serializer [<#dump(obj), #load(string)] Used for serializing messages before handing them to `.broadcast(msg)`
       def initialize(serializer: Serialize, **rest)
@@ -73,8 +70,6 @@ module GraphQL
       # An event was triggered.
       # Re-evaluate all subscribed queries and push the data over ActionCable.
       def execute_all(event, object)
-        execute_legacy(event, object) if config.handle_legacy_subscriptions
-
         fingerprints = redis.zrange(FINGERPRINTS_PREFIX + event.topic, 0, -1)
         return if fingerprints.empty?
 
@@ -107,17 +102,6 @@ module GraphQL
 
         # Having calculated the result _once_, send the same payload to all subscribers
         deliver(SUBSCRIPTIONS_PREFIX + fingerprint, result)
-      end
-
-      # For migration from pre-1.0 graphql-anycable gem
-      def execute_legacy(event, object)
-        redis.smembers(EVENT_PREFIX + event.topic).each do |subscription_id|
-          next unless redis.exists?(SUBSCRIPTION_PREFIX + subscription_id)
-          result = execute_update(subscription_id, event, object)
-          next unless result
-
-          deliver(SUBSCRIPTION_PREFIX + subscription_id, result)
-        end
       end
 
       # Disable this method as there is no fingerprint (it can be retrieved from subscription though)
@@ -205,19 +189,6 @@ module GraphQL
           fingerprint_subscriptions.each do |key, score|
             pipeline.zremrangebyscore(key, '-inf', '0') if score.value.zero?
           end
-        end
-        delete_legacy_subscription(subscription_id)
-      end
-
-      def delete_legacy_subscription(subscription_id)
-        return unless config.handle_legacy_subscriptions
-
-        events = redis.smembers(SUBSCRIPTION_EVENTS_PREFIX + subscription_id)
-        redis.pipelined do
-          events.each do |event_topic|
-            redis.srem(EVENT_PREFIX + event_topic, subscription_id)
-          end
-          redis.del(SUBSCRIPTION_EVENTS_PREFIX + subscription_id)
         end
       end
 

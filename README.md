@@ -140,7 +140,6 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     ```.env
     GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS=604800
     GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP=true
-    GRAPHQL_ANYCABLE_HANDLE_LEGACY_SUBSCRIPTIONS=false
     GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID=false
     ```
 
@@ -151,7 +150,6 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     production:
       subscription_expiration_seconds: 300 # 5 minutes
       use_redis_object_on_cleanup: false # For restricted redis installations
-      handle_legacy_subscriptions: false # For seamless upgrade from pre-1.0 versions
       use_client_provided_uniq_id: false # To avoid problems with non-uniqueness of Apollo channel identifiers
     ```
 
@@ -182,13 +180,6 @@ As in AnyCable there is no place to store subscription data in-memory, it should
     SMEMBERS graphql-subscriptions:1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o=
     => 52ee8d65-275e-4d22-94af-313129116388
     ```
-
-    > For backward compatibility with pre-1.0 versions of this gem older `graphql-event:#{event.topic}` set containing subscription identifiers is also supported.
-    >
-    > ```
-    > SMEMBERS graphql-event:1:myStats:
-    > => 52ee8d65-275e-4d22-94af-313129116388
-    > ```
 
  3. Subscription data: `graphql-subscription:#{subscription_id}` hash contains everything required to evaluate subscription on trigger and create data for client.
 
