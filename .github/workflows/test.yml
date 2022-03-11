@@ -10,27 +10,24 @@ on:
 
 jobs:
   test:
-    name: "GraphQL-Ruby ${{ matrix.graphql }} (interpreter: ${{ matrix.interpreter }}, use_client_id: ${{ matrix.client_id }}) on Ruby ${{ matrix.ruby }}"
+    name: "GraphQL-Ruby ${{ matrix.graphql }} on Ruby ${{ matrix.ruby }} (use_client_id: ${{ matrix.client_id }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - ruby: "3.0"
-            graphql: '~> 1.12.0'
+          - ruby: "3.1"
+            graphql: '~> 2.0.0'
             client_id: 'false'
-            interpreter: yes
-            anycable_rails: '~> 1.2'
+            anycable_rails: '~> 1.3'
+          - ruby: "3.0"
+            graphql: '~> 1.13.0'
+            client_id: 'false'
+            anycable_rails: '~> 1.2.0'
           - ruby: 2.7
             graphql: '~> 1.12.0'
-            client_id: 'false'
-            interpreter: yes
-            anycable_rails: '~> 1.2.0'
-          - ruby: 2.6
-            graphql: '~> 1.11.0'
             client_id: 'true'
-            interpreter: no
-            anycable_rails: '~> 1.0'
+            anycable_rails: '~> 1.1.0'
     container:
       image: ruby:${{ matrix.ruby }}
       env:
@@ -55,6 +52,4 @@ jobs:
           bundle install
           bundle update
       - name: Run RSpec
-        env:
-          GRAPHQL_RUBY_INTERPRETER: ${{ matrix.interpreter }}
         run: bundle exec rspec

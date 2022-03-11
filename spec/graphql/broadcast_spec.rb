@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-return unless TESTING_GRAPHQL_RUBY_INTERPRETER # Broadcast requires interpreter
-
 RSpec.describe "Broadcasting" do
   def subscribe(query)
     BroadcastSchema.execute(

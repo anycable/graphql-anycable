@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-return unless TESTING_GRAPHQL_RUBY_INTERPRETER # Broadcast requires interpreter
-
 require "integration_helper"
 
 RSpec.describe "broadcastable subscriptions" do

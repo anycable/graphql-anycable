@@ -45,23 +45,10 @@ end
 class AnycableSchema < GraphQL::Schema
   use GraphQL::AnyCable
 
-  if TESTING_GRAPHQL_RUBY_INTERPRETER
-    use GraphQL::Execution::Interpreter
-    use GraphQL::Analysis::AST
-  end
-
   subscription SubscriptionType
 end
 
-return unless TESTING_GRAPHQL_RUBY_INTERPRETER # Broadcast requires interpreter
-
-module Interpreted
-  class Post < GraphQL::Schema::Object
-    field :id, ID, null: false, broadcastable: true
-    field :title, String, null: true
-    field :actions, [String], null: false, broadcastable: false
-  end
-
+module Broadcastable
   class PostCreated < GraphQL::Schema::Subscription
     payload_type Post
   end
@@ -81,16 +68,14 @@ module Interpreted
     end
   end
 
-  class BroadcastSubscriptionType < GraphQL::Schema::Object
+  class SubscriptionType < GraphQL::Schema::Object
     field :post_created, subscription: PostCreated
     field :post_updated, subscription: PostUpdated
   end
 end
 
 class BroadcastSchema < GraphQL::Schema
-  use GraphQL::Execution::Interpreter
-  use GraphQL::Analysis::AST
   use GraphQL::AnyCable, broadcast: true, default_broadcastable: true
 
-  subscription Interpreted::BroadcastSubscriptionType
+  subscription Broadcastable::SubscriptionType
 end
