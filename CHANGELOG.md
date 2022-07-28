@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.1.4 - 2022-07-28
+
+- Fix deprecation warning about using client-side channel ids shown even if deprecated functionality was disabled in application code (not via config file or environment variable). [@gsamokovarov] ([#26](https://github.com/anycable/graphql-anycable/pull/26))
+
+  However, now deprecation warning won't be shown if graphql-anycable is used not in Ruby on Rails application.
+
 ## 1.1.3 - 2022-03-11
 
 ### Changed
