@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.1.5 - 2022-10-26
+
+- Fix that deprecation warning about `config.use_client_provided_uniq_id` again, so it can be issued outside of Rails. [@gsamokovarov] ([#27](https://github.com/anycable/graphql-anycable/pull/27))
+
 ## 1.1.4 - 2022-07-28
 
 - Fix deprecation warning about using client-side channel ids shown even if deprecated functionality was disabled in application code (not via config file or environment variable). [@gsamokovarov] ([#26](https://github.com/anycable/graphql-anycable/pull/26))
