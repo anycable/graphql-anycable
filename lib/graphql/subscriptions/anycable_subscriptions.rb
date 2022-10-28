@@ -56,9 +56,10 @@ module GraphQL
 
       def_delegators :"GraphQL::AnyCable", :redis, :config
 
-      SUBSCRIPTION_PREFIX  = "graphql-subscription:"  # HASH: Stores subscription data: query, context, …
       FINGERPRINTS_PREFIX  = "graphql-fingerprints:"  # ZSET: To get fingerprints by topic
+      FINGERPRINT_PREFIX   = "graphql-fingerprint:"   # HASH: Stores subscription data: query, context, …
       SUBSCRIPTIONS_PREFIX = "graphql-subscriptions:" # SET:  To get subscriptions by fingerprint
+      SUBSCRIPTION_PREFIX  = "graphql-subscription:"  # HASH: Stores mapping between topics and fingerprint for given subscription, …
       CHANNEL_PREFIX       = "graphql-channel:"       # SET:  Auxiliary structure for whole channel's subscriptions cleanup
 
       # @param serializer [<#dump(obj), #load(string)] Used for serializing messages before handing them to `.broadcast(msg)`
@@ -70,34 +71,21 @@ module GraphQL
       # An event was triggered.
       # Re-evaluate all subscribed queries and push the data over ActionCable.
       def execute_all(event, object)
-        fingerprints = redis.zrange(FINGERPRINTS_PREFIX + event.topic, 0, -1)
+        fingerprints = redis.zrange(FINGERPRINTS_PREFIX + event.topic, 0, -1, with_scores: true)
         return if fingerprints.empty?
 
-        fingerprint_subscription_ids = Hash[fingerprints.zip(
-          redis.pipelined do |pipeline|
-            fingerprints.map do |fingerprint|
-              pipeline.smembers(SUBSCRIPTIONS_PREFIX + fingerprint)
-            end
-          end
-        )]
-
-        fingerprint_subscription_ids.each do |fingerprint, subscription_ids|
-          execute_grouped(fingerprint, subscription_ids, event, object)
+        fingerprints.each do |fingerprint, _subscription_count|
+          execute_grouped(fingerprint, event, object)
         end
 
-        # Call to +trigger+ returns this. Convenient for playing in console
-        Hash[fingerprint_subscription_ids.map { |k,v| [k, v.size] }]
+        # Call to +trigger+ will return fingerprints with number of subscriptions. Convenient for playing in console
+        fingerprints
       end
 
       # The fingerprint has told us that this response should be shared by all subscribers,
       # so just run it once, then deliver the result to every subscriber
-      def execute_grouped(fingerprint, subscription_ids, event, object)
-        return if subscription_ids.empty?
-
-        subscription_id = subscription_ids.find { |sid| redis.exists?(SUBSCRIPTION_PREFIX + sid) }
-        return unless subscription_id # All subscriptions has expired but haven't cleaned up yet
-
-        result = execute_update(subscription_id, event, object)
+      def execute_grouped(fingerprint, event, object)
+        result = execute_update(fingerprint, event, object)
         return unless result
 
         # Having calculated the result _once_, send the same payload to all subscribers
@@ -131,25 +119,30 @@ module GraphQL
         # Store subscription_id in the channel state to cleanup on disconnect
         write_subscription_id(channel, channel_uniq_id)
 
-
         events.each do |event|
           channel.stream_from(SUBSCRIPTIONS_PREFIX + event.fingerprint)
         end
 
-        data = {
+        fingerprint_data = {
           query_string: query.query_string,
           variables: query.provided_variables.to_json,
           context: @serializer.dump(context.to_h),
           operation_name: query.operation_name,
+        }
+
+        subscription_data = {
           events: events.map { |e| [e.topic, e.fingerprint] }.to_h.to_json,
         }
 
         redis.multi do |pipeline|
           pipeline.sadd(CHANNEL_PREFIX + channel_uniq_id, subscription_id)
-          pipeline.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, data)
+          pipeline.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, subscription_data)
           events.each do |event|
             pipeline.zincrby(FINGERPRINTS_PREFIX + event.topic, 1, event.fingerprint)
             pipeline.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, subscription_id)
+            pipeline.mapped_hmset(FINGERPRINT_PREFIX + event.fingerprint, fingerprint_data)
+            next unless config.subscription_expiration_seconds
+            pipeline.expire(FINGERPRINT_PREFIX + event.fingerprint, config.subscription_expiration_seconds)
           end
           next unless config.subscription_expiration_seconds
           pipeline.expire(CHANNEL_PREFIX + channel_uniq_id, config.subscription_expiration_seconds)
@@ -158,9 +151,9 @@ module GraphQL
       end
 
       # Return the query from "storage" (in redis)
-      def read_subscription(subscription_id)
+      def read_subscription(fingerprint)
         redis.mapped_hmget(
-          "#{SUBSCRIPTION_PREFIX}#{subscription_id}",
+          "#{FINGERPRINT_PREFIX}#{fingerprint}",
           :query_string, :variables, :context, :operation_name
         ).tap do |subscription|
           return if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key

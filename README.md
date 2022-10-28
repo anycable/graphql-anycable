@@ -174,26 +174,36 @@ As in AnyCable there is no place to store subscription data in-memory, it should
     => 1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o=
     ```
 
- 2. Event subscriptions: `graphql-subscriptions:#{event.fingerptint}` set containing identifiers for all subscriptions for given operation with certain context and arguments (serialized in _topic_). Fingerprints are already scoped by topic.
+ 2. Subscription data: `graphql-fingerprint:#{event.fingerptint}` hash contains everything required to evaluate subscription on trigger and create data for client.
+
+   ```
+   HGETALL graphql-fingerprint:1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o=
+   => {
+     context:        '{"user_id":1,"user":{"__gid__":"Z2lkOi8vZWJheS1tYWcyL1VzZXIvMQ"}}',
+     variables:      '{}',
+     operation_name: 'MyStats'
+     query_string:   'subscription MyStats { myStatsUpdated { completed total processed __typename } }',
+   }
+   ```
+
+
+ 3. Event subscriptions: `graphql-subscriptions:#{event.fingerptint}` set containing identifiers for all subscriptions for given operation with certain context and arguments (serialized in _topic_). Fingerprints are already scoped by topic.
 
     ```
     SMEMBERS graphql-subscriptions:1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o=
     => 52ee8d65-275e-4d22-94af-313129116388
     ```
 
- 3. Subscription data: `graphql-subscription:#{subscription_id}` hash contains everything required to evaluate subscription on trigger and create data for client.
+ 4. Subscription data: `graphql-subscription:#{subscription_id}` hash contains everything required to evaluate subscription on trigger and create data for client.
 
     ```
     HGETALL graphql-subscription:52ee8d65-275e-4d22-94af-313129116388
     => {
-      context:        '{"user_id":1,"user":{"__gid__":"Z2lkOi8vZWJheS1tYWcyL1VzZXIvMQ"}}',
-      variables:      '{}',
-      operation_name: 'MyStats'
-      query_string:   'subscription MyStats { myStatsUpdated { completed total processed __typename } }',
+      events: '{"1:myStats:":"1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o="}',
     }
     ```
 
- 4. Channel subscriptions: `graphql-channel:#{channel_id}` set containing identifiers for subscriptions created in ActionCable channel to delete them on client disconnect.
+ 5. Channel subscriptions: `graphql-channel:#{channel_id}` set containing identifiers for subscriptions created in ActionCable channel to delete them on client disconnect.
 
     ```
     SMEMBERS graphql-channel:17420c6ed9e
