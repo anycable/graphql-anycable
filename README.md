@@ -140,6 +140,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     ```.env
     GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS=604800
     GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP=true
+    GRAPHQL_ANYCABLE_HANDLE_LEGACY_SUBSCRIPTIONS=false
     GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID=false
     ```
 
@@ -150,6 +151,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     production:
       subscription_expiration_seconds: 300 # 5 minutes
       use_redis_object_on_cleanup: false # For restricted redis installations
+      handle_legacy_subscriptions: false # For seamless upgrade from pre-1.3 versions
       use_client_provided_uniq_id: false # To avoid problems with non-uniqueness of Apollo channel identifiers
     ```
 

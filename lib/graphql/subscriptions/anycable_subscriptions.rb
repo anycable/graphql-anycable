@@ -156,11 +156,27 @@ module GraphQL
           "#{FINGERPRINT_PREFIX}#{fingerprint}",
           :query_string, :variables, :context, :operation_name
         ).tap do |subscription|
-          return if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
+          if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
+            return unless config.handle_legacy_subscriptions
+
+            subscription = read_legacy_subscription(fingerprint)
+            return if subscription.values.all?(&:nil?)
+          end
 
           subscription[:context] = @serializer.load(subscription[:context])
           subscription[:variables] = JSON.parse(subscription[:variables])
           subscription[:operation_name] = nil if subscription[:operation_name].strip == ""
+        end
+      end
+
+      def read_legacy_subscription(fingerprint)
+        subscription_ids = pipeline.smembers(SUBSCRIPTIONS_PREFIX + fingerprint)
+        subscription_ids.each do |subscription_id|
+          subscription = redis.mapped_hmget(
+            "#{SUBSCRIPTION_PREFIX}#{subscription_id}",
+            :query_string, :variables, :context, :operation_name,
+          )
+          return subscription unless subscription.empty?
         end
       end
 
