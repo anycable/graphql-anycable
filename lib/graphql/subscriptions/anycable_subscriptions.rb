@@ -61,6 +61,41 @@ module GraphQL
       SUBSCRIPTIONS_PREFIX = "graphql-subscriptions:" # SET:  To get subscriptions by fingerprint
       CHANNEL_PREFIX       = "graphql-channel:"       # SET:  Auxiliary structure for whole channel's subscriptions cleanup
 
+      WRITE_SUBSCRIPTION_LUA = <<~LUA.freeze
+        local channel_uniq_id = ARGV[1]
+        local subscription_id = ARGV[2]
+        local data_query_string = ARGV[3]
+        local data_variables = ARGV[4]
+        local data_context = ARGV[5]
+        local data_operation_name = ARGV[6]
+        local data_events = ARGV[7]
+        local subscription_expiration_seconds = tonumber(ARGV[8])
+
+        redis.call('sadd', "#{CHANNEL_PREFIX}" .. channel_uniq_id, channel_uniq_id, subscription_id)
+        redis.call('hmset', "#{SUBSCRIPTION_PREFIX}" .. subscription_id,
+          "query_string", data_query_string,
+          "variables", data_variables,
+          "context", data_context,
+          "operation_name", data_operation_name,
+          "query_events", data_events
+        )
+
+        for i = 9, #ARGV do
+          if ARGV[i] == nil or ARGV[i + 1] == nil then
+            break
+          end
+
+          redis.call('zincrby', "#{FINGERPRINTS_PREFIX}" .. ARGV[i], 1, ARGV[i + 1])
+          redis.call('sadd', "#{SUBSCRIPTIONS_PREFIX}" .. ARGV[i + 1], subscription_id)
+          i = i + 2;
+        end
+
+        if subscription_expiration_seconds > 0 then
+          redis.call('expire', "#{CHANNEL_PREFIX}" .. channel_uniq_id, subscription_expiration_seconds)
+          redis.call('expire', "#{SUBSCRIPTION_PREFIX}" .. subscription_id, subscription_expiration_seconds)
+        end
+      LUA
+
       # @param serializer [<#dump(obj), #load(string)] Used for serializing messages before handing them to `.broadcast(msg)`
       def initialize(serializer: Serialize, **rest)
         @serializer = serializer
@@ -131,7 +166,6 @@ module GraphQL
         # Store subscription_id in the channel state to cleanup on disconnect
         write_subscription_id(channel, channel_uniq_id)
 
-
         events.each do |event|
           channel.stream_from(SUBSCRIPTIONS_PREFIX + event.fingerprint)
         end
@@ -144,17 +178,25 @@ module GraphQL
           events: events.map { |e| [e.topic, e.fingerprint] }.to_h.to_json,
         }
 
-        redis.multi do |pipeline|
-          pipeline.sadd(CHANNEL_PREFIX + channel_uniq_id, subscription_id)
-          pipeline.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, data)
-          events.each do |event|
-            pipeline.zincrby(FINGERPRINTS_PREFIX + event.topic, 1, event.fingerprint)
-            pipeline.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, subscription_id)
-          end
-          next unless config.subscription_expiration_seconds
-          pipeline.expire(CHANNEL_PREFIX + channel_uniq_id, config.subscription_expiration_seconds)
-          pipeline.expire(SUBSCRIPTION_PREFIX + subscription_id, config.subscription_expiration_seconds)
+        topic_fingerprints = []
+
+        events.each do |event|
+          topic_fingerprints << event.topic
+          topic_fingerprints << event.fingerprint
         end
+
+        eval_script(
+          WRITE_SUBSCRIPTION_LUA,
+          channel_uniq_id,
+          subscription_id,
+          data[:query_string],
+          data[:variables],
+          data[:context],
+          data[:operation_name],
+          data[:events],
+          config.subscription_expiration_seconds || 0,
+          *topic_fingerprints
+        )
       end
 
       # Return the query from "storage" (in redis)
@@ -237,6 +279,21 @@ module GraphQL
           JSON.parse(channel.connection.socket.istate[channel.identifier])
         else
           channel.connection.socket.istate
+        end
+      end
+
+      def eval_script(script, *args)
+        script_sha = Digest::SHA1.hexdigest(script)
+        begin
+          redis.evalsha(script_sha, [], args)
+        rescue Redis::CommandError => e
+          if e.message.include?('NOSCRIPT') && attempts < 2
+            attempts += 1
+            script_sha = redis.script(:load, script)
+            retry
+          else
+            raise e
+          end
         end
       end
     end
