@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    name: "GraphQL-Ruby ${{ matrix.graphql }} on Ruby ${{ matrix.ruby }} (use_client_id: ${{ matrix.client_id }})"
+    name: "GraphQL-Ruby ${{ matrix.graphql }} on Ruby ${{ matrix.ruby }} (use_client_id: ${{ matrix.client_id }}) Redis v${{ matrix.redis_version }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -20,14 +20,17 @@ jobs:
             graphql: '~> 2.0.0'
             client_id: 'false'
             anycable_rails: '~> 1.3'
+            redis_version: latest
           - ruby: "3.0"
             graphql: '~> 1.13.0'
             client_id: 'false'
             anycable_rails: '~> 1.2.0'
+            redis_version: 5.0.4
           - ruby: 2.7
             graphql: '~> 1.12.0'
             client_id: 'true'
             anycable_rails: '~> 1.1.0'
+            redis_version: 4.0.14
     container:
       image: ruby:${{ matrix.ruby }}
       env:
@@ -38,7 +41,7 @@ jobs:
         REDIS_URL: redis://redis:6379
     services:
       redis:
-        image: redis
+        image: redis:${{ matrix.redis_version }}
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
