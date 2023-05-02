@@ -161,12 +161,6 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     end
     ```
 
- 4. Pass redis-server URL to AnyCable using ENV variables
-
-    ```bash
-    REDIS_URL=redis://localhost:6379/5 bundle exec rspec
-    ```
-
 And any other way provided by [anyway_config]. Check its documentation!
 
 ## Data model
@@ -204,6 +198,14 @@ As in AnyCable there is no place to store subscription data in-memory, it should
     ```
     SMEMBERS graphql-channel:17420c6ed9e
     => 52ee8d65-275e-4d22-94af-313129116388
+    ```
+
+## Testing applications which use `graphql-anycable`
+
+You can pass custom redis-server URL to AnyCable using ENV variable.
+
+    ```bash
+    REDIS_URL=redis://localhost:6379/5 bundle exec rspec
     ```
 
 ## Development
