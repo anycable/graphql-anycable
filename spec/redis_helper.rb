@@ -1,12 +1,14 @@
 # frozen_string_literal: true
 
-def configure_test_redis_db
-  url = ENV.fetch("REDIS_URL", "redis://localhost:6379/6") # AnyCable uses Redis DB number 5 by default
+REDIS_TEST_DB_URL = "redis://localhost:6379/6"
+
+def setup_redis_test_db
+  test_url = ENV.fetch("REDIS_URL", REDIS_TEST_DB_URL)
   channel = AnyCable.broadcast_adapter.channel
-  AnyCable.broadcast_adapter = :redis, { url: url, channel: channel }
+  AnyCable.broadcast_adapter = :redis, { url: test_url, channel: channel }
 end
 
-configure_test_redis_db
+setup_redis_test_db
 
 RSpec.configure do |config|
   config.before(:example) do
