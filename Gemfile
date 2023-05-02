@@ -17,7 +17,4 @@ group :development, :test do
 
   gem "rubocop"
   gem "rubocop-rspec"
-
-  # See https://github.com/guilleiguaran/fakeredis/pull/247
-  gem "fakeredis", github: 'guilleiguaran/fakeredis'
 end

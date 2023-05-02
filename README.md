@@ -161,6 +161,12 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     end
     ```
 
+ 4. Pass redis-server URL to AnyCable using ENV variables
+
+    ```bash
+    REDIS_URL=redis://localhost:6379/5 bundle exec rspec
+    ```
+
 And any other way provided by [anyway_config]. Check its documentation!
 
 ## Data model
