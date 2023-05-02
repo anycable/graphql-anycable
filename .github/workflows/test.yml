@@ -35,9 +35,18 @@ jobs:
         GRAPHQL_RUBY_VERSION: ${{ matrix.graphql }}
         ANYCABLE_RAILS_VERSION: ${{ matrix.anycable_rails }}
         GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID: ${{ matrix.client_id }}
+        REDIS_URL: redis://redis:6379
+    services:
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: vendor/bundle
           key: bundle-${{ matrix.ruby }}-${{ matrix.graphql }}-${{ matrix.anycable }}-${{ hashFiles('**/*.gemspec') }}-${{ hashFiles('**/Gemfile') }}
