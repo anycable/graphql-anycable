@@ -161,11 +161,11 @@ module GraphQL
         }
 
         redis.multi do |pipeline|
-          pipeline.sadd(CHANNEL_PREFIX + channel_uniq_id, subscription_id)
+          pipeline.sadd(CHANNEL_PREFIX + channel_uniq_id, [subscription_id])
           pipeline.mapped_hmset(SUBSCRIPTION_PREFIX + subscription_id, data)
           events.each do |event|
             pipeline.zincrby(FINGERPRINTS_PREFIX + event.topic, 1, event.fingerprint)
-            pipeline.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, subscription_id)
+            pipeline.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, [subscription_id])
           end
           next unless config.subscription_expiration_seconds
           pipeline.expire(CHANNEL_PREFIX + channel_uniq_id, config.subscription_expiration_seconds)
