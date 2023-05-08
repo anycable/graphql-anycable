@@ -209,6 +209,14 @@ As in AnyCable there is no place to store subscription data in-memory, it should
     => 52ee8d65-275e-4d22-94af-313129116388
     ```
 
+## Testing applications which use `graphql-anycable`
+
+You can pass custom redis-server URL to AnyCable using ENV variable.
+
+    ```bash
+    REDIS_URL=redis://localhost:6379/5 bundle exec rspec
+    ```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
