@@ -4,10 +4,10 @@ ENV["GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID"] ||= "false"
 
 require "bundler/setup"
 require "graphql/anycable"
-require "fakeredis/rspec"
 require "pry"
 
 require_relative "support/graphql_schema"
+require_relative "redis_helper"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
