@@ -15,6 +15,6 @@ group :development, :test do
   gem "pry"
   gem "pry-byebug", platform: :mri
 
-  gem "rubocop"
-  gem "rubocop-rspec"
+  gem 'rubocop', '~> 1.50', '>= 1.50.2', require: false
+  gem 'rubocop-rspec', '~> 2.20', require: false
 end
