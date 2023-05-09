@@ -90,11 +90,12 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   describe ".delete_channel_subscriptions" do
-    before do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
+    subject do
+      AnycableSchema.subscriptions.delete_channel_subscriptions(channel)
     end
 
     before do
+      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
       AnycableSchema.execute(
         query: query,
         context: { channel: channel, subscription_id: subscription_id },
@@ -108,10 +109,6 @@ RSpec.describe GraphQL::AnyCable do
     end
 
     let(:redis) { AnycableSchema.subscriptions.redis }
-
-    subject do
-      AnycableSchema.subscriptions.delete_channel_subscriptions(channel)
-    end
 
     it "removes subscription from redis" do
       expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be true
@@ -125,11 +122,12 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   describe "legacy .delete_channel_subscriptions" do
-    before do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = true
+    subject do
+      AnycableSchema.subscriptions.delete_channel_subscriptions(channel.id)
     end
 
     before do
+      GraphQL::AnyCable.config.use_client_provided_uniq_id = true
       AnycableSchema.execute(
         query: query,
         context: { channel: channel, subscription_id: subscription_id },
@@ -143,10 +141,6 @@ RSpec.describe GraphQL::AnyCable do
     end
 
     let(:redis) { AnycableSchema.subscriptions.redis }
-
-    subject do
-      AnycableSchema.subscriptions.delete_channel_subscriptions(channel.id)
-    end
 
     it "removes subscription from redis" do
       expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be true

@@ -27,7 +27,7 @@ module GraphQL
         adapter = ::AnyCable.broadcast_adapter
         unless adapter.is_a?(::AnyCable::BroadcastAdapters::Redis)
           raise "Unsupported AnyCable adapter: #{adapter.class}. " \
-                  "graphql-anycable works only with redis broadcast adapter."
+                "graphql-anycable works only with redis broadcast adapter."
         end
         ::AnyCable.broadcast_adapter.redis_conn
       end

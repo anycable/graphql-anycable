@@ -2,7 +2,7 @@
 
 POSTS = [
   { id: "a", title: "GraphQL is good?", actions: %w[yes no] },
-  { id: "b", title: "Is there life after GraphQL?", actions: %w[no still-no] }
+  { id: "b", title: "Is there life after GraphQL?", actions: %w[no still-no] },
 ].freeze
 
 class Product < GraphQL::Schema::Object
@@ -22,11 +22,11 @@ class PostUpdated < GraphQL::Schema::Subscription
   field :post, Post, null: false
 
   def subscribe(id:)
-    {post: POSTS.find { |post| post[:id] == id }}
+    { post: POSTS.find { |post| post[:id] == id } }
   end
 
   def update(*)
-    {post: object}
+    { post: object }
   end
 end
 
@@ -53,18 +53,17 @@ module Broadcastable
     payload_type Post
   end
 
-
   class PostUpdated < GraphQL::Schema::Subscription
     argument :id, ID, required: true
 
     field :post, Post, null: false
 
     def subscribe(id:)
-      {post: POSTS.find { |post| post[:id] == id }}
+      { post: POSTS.find { |post| post[:id] == id } }
     end
 
     def update(*)
-      {post: object}
+      { post: object }
     end
   end
 

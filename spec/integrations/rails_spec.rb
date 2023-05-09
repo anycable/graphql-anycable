@@ -17,7 +17,7 @@ require "anycable-rails"
 require "action_cable/server"
 require "action_cable/server/base"
 # Only for anycable-rails <1.3.0
-unless defined?(::AnyCable::Rails::Connection)
+unless defined?(AnyCable::Rails::Connection)
   require "anycable/rails/channel_state"
   require "anycable/rails/actioncable/connection"
 end
@@ -35,7 +35,7 @@ module ApplicationCable
     delegate :schema_class, to: :connection
 
     def execute(data)
-      result = 
+      result =
         schema_class.execute(
           query: data["query"],
           context: context,
@@ -46,8 +46,8 @@ module ApplicationCable
       transmit(
         {
           result: result.subscription? ? { data: nil } : result.to_h,
-          more: result.subscription?
-        }
+          more: result.subscription?,
+        },
       )
     end
 
@@ -67,32 +67,13 @@ module ApplicationCable
 end
 
 RSpec.describe "Rails integration" do
-  let(:schema) { BroadcastSchema }
-  let(:channel_class) { "ApplicationCable::GraphqlChannel" }
-
-  if defined?(::AnyCable::Rails::Connection)
-    before do
-      allow(AnyCable).to receive(:connection_factory)
-        .and_return(->(socket, **options) { ::AnyCable::Rails::Connection.new(ApplicationCable::Connection, socket, **options) })
-    end
-  else
-    before do
-      allow(AnyCable).to receive(:connection_factory)
-        .and_return(->(socket, **options) { ApplicationCable::Connection.call(socket, **options) })
-    end
-  end
-
-  let(:variables) { {id: "a"} }
-
-  let(:subscription_payload) { {query: query, variables: variables} }
-
-  let(:command) { "message" }
-  let(:data) { {action: "execute", **subscription_payload} }
-
   subject { handler.handle(:command, request) }
 
-  before { allow(AnyCable.broadcast_adapter).to receive(:broadcast) }
-
+  let(:schema) { BroadcastSchema }
+  let(:variables) { { id: "a" } }
+  let(:subscription_payload) { { query: query, variables: variables } }
+  let(:command) { "message" }
+  let(:data) { { action: "execute", **subscription_payload } }
   let(:query) do
     <<~GQL
       subscription postSubscription($id: ID!) {
@@ -104,8 +85,21 @@ RSpec.describe "Rails integration" do
       }
     GQL
   end
-
   let(:redis) { AnycableSchema.subscriptions.redis }
+  let(:channel_class) { "ApplicationCable::GraphqlChannel" }
+
+  before do
+    if defined?(AnyCable::Rails::Connection)
+      allow(AnyCable).to receive(:connection_factory)
+        .and_return(lambda { |socket, **options|
+                      AnyCable::Rails::Connection.new(ApplicationCable::Connection, socket, **options)
+                    })
+    else
+      allow(AnyCable).to receive(:connection_factory)
+        .and_return(->(socket, **options) { ApplicationCable::Connection.call(socket, **options) })
+    end
+    allow(AnyCable.broadcast_adapter).to receive(:broadcast)
+  end
 
   it "execute multiple clients + trigger + disconnect one by one" do
     # first, subscribe to obtain the connection state
@@ -126,7 +120,7 @@ RSpec.describe "Rails integration" do
     expect(redis.keys("graphql-subscription:*").size).to eq(2)
     expect(redis.keys("graphql-subscriptions:*").size).to eq(1)
 
-    schema.subscriptions.trigger(:post_updated, {id: "a"}, POSTS.first)
+    schema.subscriptions.trigger(:post_updated, { id: "a" }, POSTS.first)
     expect(AnyCable.broadcast_adapter).to have_received(:broadcast).once
 
     first_state = response.istate
@@ -141,7 +135,7 @@ RSpec.describe "Rails integration" do
     expect(redis.keys("graphql-subscription:*").size).to eq(1)
     expect(redis.keys("graphql-subscriptions:*").size).to eq(1)
 
-    schema.subscriptions.trigger(:post_updated, {id: "a"}, POSTS.first)
+    schema.subscriptions.trigger(:post_updated, { id: "a" }, POSTS.first)
     expect(AnyCable.broadcast_adapter).to have_received(:broadcast).twice
 
     second_state = response_2.istate
@@ -150,7 +144,7 @@ RSpec.describe "Rails integration" do
     disconnect_request = AnyCable::DisconnectRequest.new(
       identifiers: request_2.connection_identifiers,
       subscriptions: [request_2.identifier],
-      env: request_2.env
+      env: request_2.env,
     )
 
     disconnect_request.istate[request_2.identifier] = second_state.to_h.to_json
@@ -161,7 +155,7 @@ RSpec.describe "Rails integration" do
     expect(redis.keys("graphql-subscription:*").size).to eq(0)
     expect(redis.keys("graphql-subscriptions:*").size).to eq(0)
 
-    schema.subscriptions.trigger(:post_updated, {id: "a"}, POSTS.first)
+    schema.subscriptions.trigger(:post_updated, { id: "a" }, POSTS.first)
     expect(AnyCable.broadcast_adapter).to have_received(:broadcast).twice
   end
 end

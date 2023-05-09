@@ -73,20 +73,20 @@ module GraphQL
         fingerprints = redis.zrange(FINGERPRINTS_PREFIX + event.topic, 0, -1)
         return if fingerprints.empty?
 
-        fingerprint_subscription_ids = Hash[fingerprints.zip(
+        fingerprint_subscription_ids = fingerprints.zip(
           redis.pipelined do |pipeline|
             fingerprints.map do |fingerprint|
               pipeline.smembers(SUBSCRIPTIONS_PREFIX + fingerprint)
             end
-          end
-        )]
+          end,
+        ).to_h
 
         fingerprint_subscription_ids.each do |fingerprint, subscription_ids|
           execute_grouped(fingerprint, subscription_ids, event, object)
         end
 
         # Call to +trigger+ returns this. Convenient for playing in console
-        Hash[fingerprint_subscription_ids.map { |k,v| [k, v.size] }]
+        fingerprint_subscription_ids.map { |k, v| [k, v.size] }.to_h
       end
 
       # The fingerprint has told us that this response should be shared by all subscribers,
@@ -131,7 +131,6 @@ module GraphQL
         # Store subscription_id in the channel state to cleanup on disconnect
         write_subscription_id(channel, channel_uniq_id)
 
-
         events.each do |event|
           channel.stream_from(SUBSCRIPTIONS_PREFIX + event.fingerprint)
         end
@@ -152,6 +151,7 @@ module GraphQL
             pipeline.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, [subscription_id])
           end
           next unless config.subscription_expiration_seconds
+
           pipeline.expire(CHANNEL_PREFIX + channel_uniq_id, config.subscription_expiration_seconds)
           pipeline.expire(SUBSCRIPTION_PREFIX + subscription_id, config.subscription_expiration_seconds)
         end
@@ -161,7 +161,7 @@ module GraphQL
       def read_subscription(subscription_id)
         redis.mapped_hmget(
           "#{SUBSCRIPTION_PREFIX}#{subscription_id}",
-          :query_string, :variables, :context, :operation_name
+          :query_string, :variables, :context, :operation_name,
         ).tap do |subscription|
           return if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
 
@@ -187,7 +187,7 @@ module GraphQL
         # Clean up fingerprints that doesn't have any subscriptions left
         redis.pipelined do |pipeline|
           fingerprint_subscriptions.each do |key, score|
-            pipeline.zremrangebyscore(key, '-inf', '0') if score.value.zero?
+            pipeline.zremrangebyscore(key, "-inf", "0") if score.value.zero?
           end
         end
       end
