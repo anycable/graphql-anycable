@@ -86,7 +86,7 @@ module GraphQL
         end
 
         # Call to +trigger+ returns this. Convenient for playing in console
-        fingerprint_subscription_ids.map { |k, v| [k, v.size] }.to_h
+        fingerprint_subscription_ids.transform_values(&:size)
       end
 
       # The fingerprint has told us that this response should be shared by all subscribers,
@@ -141,7 +141,7 @@ module GraphQL
           variables: query.provided_variables.to_json,
           context: @serializer.dump(context.to_h),
           operation_name: query.operation_name,
-          events: events.map { |e| [e.topic, e.fingerprint] }.to_h.to_json,
+          events: events.to_h { |e| [e.topic, e.fingerprint] }.to_json,
         }
 
         redis.multi do |pipeline|

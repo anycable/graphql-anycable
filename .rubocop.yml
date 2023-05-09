@@ -7,7 +7,7 @@ require:
 - rubocop-rspec
 
 AllCops:
-  TargetRubyVersion: 2.3
+  TargetRubyVersion: 2.7
 
 Metrics/BlockLength:
   Exclude:
