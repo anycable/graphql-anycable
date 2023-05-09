@@ -32,6 +32,4 @@ Gem::Specification.new do |spec|
   spec.add_dependency "anyway_config", ">= 1.3", "< 3"
   spec.add_dependency "graphql",       ">= 1.11", "< 3"
   spec.add_dependency "redis",         ">= 4.2.0"
-
-  spec.metadata["rubygems_mfa_required"] = "true"
 end
