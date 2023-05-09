@@ -95,7 +95,7 @@ RSpec.describe GraphQL::AnyCable do
     end
 
     before do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
+      described_class.config.use_client_provided_uniq_id = false
       AnycableSchema.execute(
         query: query,
         context: { channel: channel, subscription_id: subscription_id },
@@ -105,7 +105,7 @@ RSpec.describe GraphQL::AnyCable do
     end
 
     after do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
+      described_class.config.use_client_provided_uniq_id = false
     end
 
     let(:redis) { AnycableSchema.subscriptions.redis }
@@ -127,7 +127,7 @@ RSpec.describe GraphQL::AnyCable do
     end
 
     before do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = true
+      described_class.config.use_client_provided_uniq_id = true
       AnycableSchema.execute(
         query: query,
         context: { channel: channel, subscription_id: subscription_id },
@@ -137,7 +137,7 @@ RSpec.describe GraphQL::AnyCable do
     end
 
     after do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
+      described_class.config.use_client_provided_uniq_id = false
     end
 
     let(:redis) { AnycableSchema.subscriptions.redis }
