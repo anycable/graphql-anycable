@@ -4,7 +4,7 @@ require "anycable"
 require "graphql/subscriptions"
 require "graphql/anycable/errors"
 
-# rubocop: disable Metrics/AbcSize, Metrics/LineLength, Metrics/MethodLength
+# rubocop:disable Metrics/AbcSize, Metrics/LineLength, Metrics/MethodLength, Metrics/ClassLength
 
 # A subscriptions implementation that sends data as AnyCable broadcastings.
 #
@@ -118,6 +118,7 @@ module GraphQL
         anycable.broadcast(stream_key, payload)
       end
 
+      # rubocop:disable Metrics/CyclomaticComplexity
       # Save query to "storage" (in redis)
       def write_subscription(query, events)
         context = query.context.to_h
@@ -156,6 +157,7 @@ module GraphQL
           pipeline.expire(SUBSCRIPTION_PREFIX + subscription_id, config.subscription_expiration_seconds)
         end
       end
+      # rubocop:enable Metrics/CyclomaticComplexity
 
       # Return the query from "storage" (in redis)
       def read_subscription(subscription_id)
@@ -163,7 +165,7 @@ module GraphQL
           "#{SUBSCRIPTION_PREFIX}#{subscription_id}",
           :query_string, :variables, :context, :operation_name,
         ).tap do |subscription|
-          return if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
+          break if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
 
           subscription[:context] = @serializer.load(subscription[:context])
           subscription[:variables] = JSON.parse(subscription[:variables])
@@ -242,4 +244,4 @@ module GraphQL
     end
   end
 end
-# rubocop: enable Metrics/AbcSize, Metrics/LineLength, Metrics/MethodLength
+# rubocop:enable Metrics/AbcSize, Metrics/LineLength, Metrics/MethodLength, Metrics/ClassLength

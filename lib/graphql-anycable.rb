@@ -13,7 +13,8 @@ module GraphQL
     def self.use(schema, **options)
       if config.use_client_provided_uniq_id?
         warn "[Deprecated] Using client provided channel uniq IDs could lead to unexpected behaviour, " \
-             "please, set GraphQL::AnyCable.config.use_client_provided_uniq_id = false or GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID=false, " \
+             "please, set GraphQL::AnyCable.config.use_client_provided_uniq_id = false " \
+             "or GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID=false, " \
              "and update the `#unsubscribed` callback code according to the latest docs."
       end
 

@@ -34,6 +34,7 @@ module ApplicationCable
   class GraphqlChannel < ActionCable::Channel::Base
     delegate :schema_class, to: :connection
 
+    # rubocop:disable Metrics/MethodLength
     def execute(data)
       result =
         schema_class.execute(
@@ -50,6 +51,7 @@ module ApplicationCable
         },
       )
     end
+    # rubocop:enable Metrics/MethodLength
 
     def unsubscribed
       schema_class.subscriptions.delete_channel_subscriptions(self)

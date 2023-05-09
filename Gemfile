@@ -17,4 +17,10 @@ group :development, :test do
 
   gem "rubocop", "~> 1.50", ">= 1.50.2", require: false
   gem "rubocop-rspec", "~> 2.20", require: false
+
+  gem "bundler", "~> 2.0"
+  gem "rack"
+  gem "railties"
+  gem "rake", ">= 12.3.3"
+  gem "rspec", "~> 3.0"
 end

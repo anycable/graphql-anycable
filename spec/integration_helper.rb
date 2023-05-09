@@ -46,6 +46,7 @@ class FakeConnection
     @subscriptions = subscriptions
   end
 
+  # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
   def handle_channel_command(identifier, command, data)
     parsed_id = JSON.parse(identifier)
 
@@ -74,6 +75,7 @@ class FakeConnection
       raise "Unknown command"
     end
   end
+  # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
   def transmit(data)
     socket.transmit data.to_json

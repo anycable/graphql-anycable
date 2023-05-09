@@ -45,6 +45,21 @@ Style/TrailingCommaInHashLiteral:
   Enabled: true
   EnforcedStyleForMultiline: consistent_comma
 
+Layout/ExtraSpacing:
+  Enabled: false
+
+Layout/SpaceAroundOperators:
+  Enabled: false
+
+
+Naming/FileName:
+  Exclude:
+    - 'lib/graphql-anycable.rb'
+
+RSpec/FilePath:
+  Exclude:
+    - 'spec/graphql/anycable_spec.rb'
+
 Gemspec/DeprecatedAttributeAssignment: # new in 1.30
   Enabled: true
 Gemspec/DevelopmentDependencies: # new in 1.44

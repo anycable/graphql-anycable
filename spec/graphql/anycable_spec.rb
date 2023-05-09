@@ -35,7 +35,8 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   let(:fingerprint) do
-    ":productUpdated:/SomeSubscription/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o="
+    ":productUpdated:/SomeSubscription/" \
+      "fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o="
   end
 
   before do
