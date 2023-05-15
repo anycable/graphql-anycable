@@ -17,11 +17,6 @@ RSpec/AnyInstance:
 RSpec/ExampleLength:
   Max: 35
 
-# Offense count: 20
-# Configuration parameters: AllowSubject.
-RSpec/MultipleMemoizedHelpers:
-  Max: 8
-
 # Offense count: 5
 # Configuration parameters: AllowedConstants.
 Style/Documentation:

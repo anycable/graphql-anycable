@@ -9,6 +9,9 @@ require:
 AllCops:
   TargetRubyVersion: 2.7
 
+RSpec/MultipleMemoizedHelpers:
+  Max: 8
+
 RSpec/DescribeClass:
   Exclude:
     - 'spec/integrations/**'
