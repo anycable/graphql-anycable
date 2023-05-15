@@ -66,7 +66,7 @@ RSpec.describe GraphQL::AnyCable do
       GRAPHQL
     end
 
-    context "triggering update event" do
+    context "with triggering update event" do
       it "broadcasts message only for update event" do
         subject
         AnycableSchema.subscriptions.trigger(:product_updated, {}, { id: 1, title: "foo" })
@@ -74,7 +74,7 @@ RSpec.describe GraphQL::AnyCable do
       end
     end
 
-    context "triggering create event" do
+    context "with triggering create event" do
       let(:expected_result) do
         <<~JSON.strip
           {"result":{"data":{"productCreated":{"id":"1","title":"Gravizapa"}}},"more":true}

@@ -13,14 +13,6 @@ RSpec/AnyInstance:
     - 'spec/graphql/anycable_spec.rb'
 
 # Offense count: 3
-# Configuration parameters: Prefixes, AllowedPatterns.
-# Prefixes: when, with, without
-RSpec/ContextWording:
-  Exclude:
-    - 'spec/graphql/anycable_spec.rb'
-    - 'spec/integration_helper.rb'
-
-# Offense count: 3
 # Configuration parameters: IgnoredMetadata.
 RSpec/DescribeClass:
   Exclude:

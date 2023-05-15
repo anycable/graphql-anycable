@@ -3,7 +3,7 @@
 require "anycable/rspec"
 require "rack"
 
-RSpec.shared_context "rpc" do
+RSpec.shared_context "with rpc" do
   include_context "anycable:rpc:command"
 
   let(:user) { "john" }
@@ -102,5 +102,5 @@ RSpec.configure do |config|
     metadata[:integration] = true
   end
 
-  config.include_context "rpc", integration: true
+  config.include_context "with rpc", integration: true
 end
