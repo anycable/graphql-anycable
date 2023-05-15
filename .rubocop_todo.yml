@@ -31,12 +31,6 @@ RSpec/NamedSubject:
     - 'spec/integrations/broadcastable_subscriptions_spec.rb'
     - 'spec/integrations/per_client_subscriptions_spec.rb'
 
-# Offense count: 7
-# Configuration parameters: IgnoreNameless, IgnoreSymbolicNames.
-RSpec/VerifiedDoubles:
-  Exclude:
-    - 'spec/graphql/anycable_spec.rb'
-    - 'spec/graphql/broadcast_spec.rb'
 
 # Offense count: 5
 # Configuration parameters: AllowedConstants.

@@ -28,6 +28,10 @@ class FakeConnection
       @params = params
     end
 
+    def id
+      @params["channelId"]
+    end
+
     def stream_from(broadcasting)
       connection.socket.subscribe identifier, broadcasting
     end

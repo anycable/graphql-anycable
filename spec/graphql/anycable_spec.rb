@@ -23,9 +23,15 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   let(:channel) do
-    socket = double("Socket", istate: AnyCable::Socket::State.new({}))
-    connection = double("Connection", anycable_socket: socket)
-    double("Channel", id: "legacy_id", params: { "channelId" => "legacy_id" }, stream_from: nil, connection: connection)
+    socket = instance_double(AnyCable::Socket, istate: AnyCable::Socket::State.new({}))
+    connection = instance_double(FakeConnection, anycable_socket: socket)
+    instance_double(
+      FakeConnection::Channel,
+      id: "legacy_id",
+      params: { "channelId" => "legacy_id" },
+      stream_from: nil,
+      connection: connection,
+    )
   end
 
   let(:anycable) { AnyCable.broadcast_adapter }
