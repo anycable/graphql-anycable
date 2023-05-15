@@ -12,19 +12,3 @@ RSpec/AnyInstance:
   Exclude:
     - 'spec/graphql/anycable_spec.rb'
 
-# Offense count: 13
-# Configuration parameters: CountAsOne.
-RSpec/ExampleLength:
-  Max: 35
-
-# Offense count: 5
-# Configuration parameters: AllowedConstants.
-Style/Documentation:
-  Exclude:
-    - 'spec/**/*'
-    - 'test/**/*'
-    - 'lib/graphql-anycable.rb'
-    - 'lib/graphql/anycable/cleaner.rb'
-    - 'lib/graphql/anycable/config.rb'
-    - 'lib/graphql/anycable/railtie.rb'
-    - 'lib/graphql/subscriptions/anycable_subscriptions.rb'

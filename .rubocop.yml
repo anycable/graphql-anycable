@@ -9,8 +9,14 @@ require:
 AllCops:
   TargetRubyVersion: 2.7
 
+Style/Documentation:
+  Enabled: false
+
 RSpec/MultipleMemoizedHelpers:
   Max: 8
+
+RSpec/ExampleLength:
+  Max: 35
 
 RSpec/DescribeClass:
   Exclude:
