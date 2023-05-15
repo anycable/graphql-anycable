@@ -9,6 +9,10 @@ require:
 AllCops:
   TargetRubyVersion: 2.7
 
+RSpec/DescribeClass:
+  Exclude:
+    - 'spec/integrations/**'
+
 Metrics/BlockLength:
   Exclude:
   - "Gemfile"

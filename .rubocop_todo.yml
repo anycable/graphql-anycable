@@ -12,19 +12,6 @@ RSpec/AnyInstance:
   Exclude:
     - 'spec/graphql/anycable_spec.rb'
 
-# Offense count: 3
-# Configuration parameters: IgnoredMetadata.
-RSpec/DescribeClass:
-  Exclude:
-    - '**/spec/features/**/*'
-    - '**/spec/requests/**/*'
-    - '**/spec/routing/**/*'
-    - '**/spec/system/**/*'
-    - '**/spec/views/**/*'
-    - 'spec/integrations/broadcastable_subscriptions_spec.rb'
-    - 'spec/integrations/per_client_subscriptions_spec.rb'
-    - 'spec/integrations/rails_spec.rb'
-
 # Offense count: 13
 # Configuration parameters: CountAsOne.
 RSpec/ExampleLength:
