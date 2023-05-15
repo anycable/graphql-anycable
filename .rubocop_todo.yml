@@ -7,16 +7,6 @@
 # versions of RuboCop, may require this file to be generated again.
 
 
-# Offense count: 6
-# Configuration parameters: EnforcedStyle, CheckMethodNames, CheckSymbols, AllowedIdentifiers, AllowedPatterns.
-# SupportedStyles: snake_case, normalcase, non_integer
-# AllowedIdentifiers: capture3, iso8601, rfc1123_date, rfc822, rfc2822, rfc3339, x86_64
-Naming/VariableNumber:
-  Exclude:
-    - 'spec/integrations/broadcastable_subscriptions_spec.rb'
-    - 'spec/integrations/per_client_subscriptions_spec.rb'
-    - 'spec/integrations/rails_spec.rb'
-
 # Offense count: 2
 RSpec/AnyInstance:
   Exclude:

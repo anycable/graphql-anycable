@@ -111,13 +111,13 @@ RSpec.describe "Rails integration" do
     expect(redis.keys("graphql-subscription:*").size).to eq(1)
     expect(redis.keys("graphql-subscriptions:*").size).to eq(1)
 
-    request_2 = request.dup
+    request2 = request.dup
 
     # update request context and channelId
-    request_2.connection_identifiers = identifiers.merge(current_user: "alice").to_json
-    request_2.identifier = channel_identifier.merge(channelId: rand(1000).to_s).to_json
+    request2.connection_identifiers = identifiers.merge(current_user: "alice").to_json
+    request2.identifier = channel_identifier.merge(channelId: rand(1000).to_s).to_json
 
-    response_2 = handler.handle(:command, request_2)
+    response2 = handler.handle(:command, request2)
 
     expect(redis.keys("graphql-subscription:*").size).to eq(2)
     expect(redis.keys("graphql-subscriptions:*").size).to eq(1)
@@ -140,16 +140,16 @@ RSpec.describe "Rails integration" do
     schema.subscriptions.trigger(:post_updated, { id: "a" }, POSTS.first)
     expect(AnyCable.broadcast_adapter).to have_received(:broadcast).twice
 
-    second_state = response_2.istate
+    second_state = response2.istate
 
     # Disconnect the second one via #disconnect call
     disconnect_request = AnyCable::DisconnectRequest.new(
-      identifiers: request_2.connection_identifiers,
-      subscriptions: [request_2.identifier],
-      env: request_2.env,
+      identifiers: request2.connection_identifiers,
+      subscriptions: [request2.identifier],
+      env: request2.env,
     )
 
-    disconnect_request.istate[request_2.identifier] = second_state.to_h.to_json
+    disconnect_request.istate[request2.identifier] = second_state.to_h.to_json
 
     disconnect_response = handler.handle(:disconnect, disconnect_request)
     expect(disconnect_response).to be_success

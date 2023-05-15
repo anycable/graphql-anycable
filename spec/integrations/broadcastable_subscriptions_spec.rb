@@ -112,13 +112,13 @@ RSpec.describe "broadcastable subscriptions" do
       expect(redis.keys("graphql-subscription:*").size).to eq(1)
       expect(redis.keys("graphql-subscriptions:*").size).to eq(1)
 
-      request_2 = request.dup
+      request2 = request.dup
 
       # update request context and channelId
-      request_2.connection_identifiers = identifiers.merge(current_user: "alice").to_json
-      request_2.identifier = channel_identifier.merge(channelId: rand(1000).to_s).to_json
+      request2.connection_identifiers = identifiers.merge(current_user: "alice").to_json
+      request2.identifier = channel_identifier.merge(channelId: rand(1000).to_s).to_json
 
-      response_2 = handler.handle(:command, request_2)
+      response2 = handler.handle(:command, request2)
 
       expect(redis.keys("graphql-subscription:*").size).to eq(2)
       expect(redis.keys("graphql-subscriptions:*").size).to eq(1)
@@ -141,11 +141,11 @@ RSpec.describe "broadcastable subscriptions" do
       schema.subscriptions.trigger(:post_updated, { id: "a" }, POSTS.first)
       expect(AnyCable.broadcast_adapter).to have_received(:broadcast).twice
 
-      second_state = response_2.istate
+      second_state = response2.istate
 
-      request_2.command = "unsubscribe"
-      request_2.data = ""
-      request_2.istate = second_state
+      request2.command = "unsubscribe"
+      request2.data = ""
+      request2.istate = second_state
 
       response = handler.handle(:command, request)
       expect(response).to be_success
