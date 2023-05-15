@@ -69,8 +69,6 @@ module ApplicationCable
 end
 
 RSpec.describe "Rails integration" do
-  subject { handler.handle(:command, request) }
-
   let(:schema) { BroadcastSchema }
   let(:variables) { { id: "a" } }
   let(:subscription_payload) { { query: query, variables: variables } }

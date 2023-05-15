@@ -3,7 +3,7 @@
 require "integration_helper"
 
 RSpec.describe "non-broadcastable subscriptions" do
-  subject { handler.handle(:command, request) }
+  subject(:execute_request) { handler.handle(:command, request) }
 
   let(:schema) { AnycableSchema }
 
@@ -29,18 +29,18 @@ RSpec.describe "non-broadcastable subscriptions" do
 
   describe "execute" do
     it "responds with result" do
-      expect(subject).to be_success
-      expect(subject.transmissions.size).to eq 1
-      expect(subject.transmissions.first).to eq({ result: { data: nil }, more: true }.to_json)
-      expect(subject.streams.size).to eq 1
-      expect(subject.istate["sid"]).not_to be_nil
+      expect(execute_request).to be_success
+      expect(execute_request.transmissions.size).to eq 1
+      expect(execute_request.transmissions.first).to eq({ result: { data: nil }, more: true }.to_json)
+      expect(execute_request.streams.size).to eq 1
+      expect(execute_request.istate["sid"]).not_to be_nil
     end
 
     specify "creates uniq stream for each subscription" do
-      expect(subject).to be_success
-      expect(subject.streams.size).to eq 1
+      expect(execute_request).to be_success
+      expect(execute_request.streams.size).to eq 1
 
-      all_streams = Set.new(subject.streams)
+      all_streams = Set.new(execute_request.streams)
 
       # update request channelId
       request.identifier = channel_identifier.merge(channelId: rand(1000).to_s).to_json
@@ -186,7 +186,7 @@ RSpec.describe "non-broadcastable subscriptions" do
       let(:command) { "unsubscribe" }
 
       specify do
-        expect(subject).to be_success
+        expect(execute_request).to be_success
       end
     end
   end

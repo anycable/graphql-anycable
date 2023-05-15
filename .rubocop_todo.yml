@@ -22,16 +22,6 @@ RSpec/ExampleLength:
 RSpec/MultipleMemoizedHelpers:
   Max: 8
 
-# Offense count: 25
-# Configuration parameters: EnforcedStyle, IgnoreSharedExamples.
-# SupportedStyles: always, named_only
-RSpec/NamedSubject:
-  Exclude:
-    - 'spec/graphql/anycable_spec.rb'
-    - 'spec/integrations/broadcastable_subscriptions_spec.rb'
-    - 'spec/integrations/per_client_subscriptions_spec.rb'
-
-
 # Offense count: 5
 # Configuration parameters: AllowedConstants.
 Style/Documentation:

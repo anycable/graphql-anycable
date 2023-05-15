@@ -3,7 +3,7 @@
 require "integration_helper"
 
 RSpec.describe "broadcastable subscriptions" do
-  subject { handler.handle(:command, request) }
+  subject(:execute_request) { handler.handle(:command, request) }
 
   let(:schema) { BroadcastSchema }
 
@@ -29,18 +29,18 @@ RSpec.describe "broadcastable subscriptions" do
 
   describe "execute" do
     it "responds with result" do
-      expect(subject).to be_success
-      expect(subject.transmissions.size).to eq 1
-      expect(subject.transmissions.first).to eq({ result: { data: nil }, more: true }.to_json)
-      expect(subject.streams.size).to eq 1
-      expect(subject.istate["sid"]).not_to be_nil
+      expect(execute_request).to be_success
+      expect(execute_request.transmissions.size).to eq 1
+      expect(execute_request.transmissions.first).to eq({ result: { data: nil }, more: true }.to_json)
+      expect(execute_request.streams.size).to eq 1
+      expect(execute_request.istate["sid"]).not_to be_nil
     end
 
     specify "streams depends only on query params and the same for equal subscriptions" do
-      expect(subject).to be_success
-      expect(subject.streams.size).to eq 1
+      expect(execute_request).to be_success
+      expect(execute_request.streams.size).to eq 1
 
-      stream_name = subject.streams.first
+      stream_name = execute_request.streams.first
 
       # update request context and channelId
       request.connection_identifiers = identifiers.merge(current_user: "alice").to_json
@@ -203,7 +203,7 @@ RSpec.describe "broadcastable subscriptions" do
       let(:command) { "unsubscribe" }
 
       specify do
-        expect(subject).to be_success
+        expect(execute_request).to be_success
       end
     end
   end

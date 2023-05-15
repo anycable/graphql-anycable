@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe GraphQL::AnyCable do
-  subject do
+  subject(:execute_query) do
     AnycableSchema.execute(
       query: query,
       context: { channel: channel, subscription_id: subscription_id },
@@ -52,12 +52,12 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   it "subscribes channel to stream updates from GraphQL subscription" do
-    subject
+    execute_query
     expect(channel).to have_received(:stream_from).with("graphql-subscriptions:#{fingerprint}")
   end
 
   it "broadcasts message when event is being triggered" do
-    subject
+    execute_query
     AnycableSchema.subscriptions.trigger(:product_updated, {}, { id: 1, title: "foo" })
     expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
   end
@@ -74,7 +74,7 @@ RSpec.describe GraphQL::AnyCable do
 
     context "with triggering update event" do
       it "broadcasts message only for update event" do
-        subject
+        execute_query
         AnycableSchema.subscriptions.trigger(:product_updated, {}, { id: 1, title: "foo" })
         expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
       end
@@ -88,7 +88,7 @@ RSpec.describe GraphQL::AnyCable do
       end
 
       it "broadcasts message only for create event" do
-        subject
+        execute_query
         AnycableSchema.subscriptions.trigger(:product_created, {}, { id: 1, title: "Gravizapa" })
 
         expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
@@ -97,7 +97,7 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   describe ".delete_channel_subscriptions" do
-    subject do
+    subject(:delete_subscriptions) do
       AnycableSchema.subscriptions.delete_channel_subscriptions(channel)
     end
 
@@ -121,7 +121,7 @@ RSpec.describe GraphQL::AnyCable do
       expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be true
       expect(redis.exists?("graphql-channel:some-truly-random-number")).to be true
       expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be true
-      subject
+      delete_subscriptions
       expect(redis.exists?("graphql-channel:some-truly-random-number")).to be false
       expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be false
       expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
@@ -129,7 +129,7 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   describe "legacy .delete_channel_subscriptions" do
-    subject do
+    subject(:delete_subscriptions) do
       AnycableSchema.subscriptions.delete_channel_subscriptions(channel.id)
     end
 
@@ -153,7 +153,7 @@ RSpec.describe GraphQL::AnyCable do
       expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be true
       expect(redis.exists?("graphql-channel:legacy_id")).to be true
       expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be true
-      subject
+      delete_subscriptions
       expect(redis.exists?("graphql-channel:legacy_id")).to be false
       expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be false
       expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
@@ -161,7 +161,7 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   describe "with missing channel instance in execution context" do
-    subject do
+    subject(:execute_query) do
       AnycableSchema.execute(
         query: query,
         context: {}, # Intentionally left blank
@@ -177,7 +177,7 @@ RSpec.describe GraphQL::AnyCable do
     end
 
     it "raises configuration error" do
-      expect { subject }.to raise_error(
+      expect { execute_query }.to raise_error(
         GraphQL::AnyCable::ChannelConfigurationError,
         /ActionCable channel wasn't provided in the context for GraphQL query execution!/,
       )
