@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module GraphQL
   module AnyCable
     # This error is thrown when ActionCable channel wasn't provided to subscription implementation.

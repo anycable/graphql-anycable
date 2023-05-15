@@ -5,7 +5,8 @@ require "graphql-anycable"
 namespace :graphql do
   namespace :anycable do
     desc "Clean up stale graphql channels, subscriptions, and events from redis"
-    task clean: %i[clean:channels clean:subscriptions clean:events clean:fingerprint_subscriptions clean:topic_fingerprints]
+    task clean: %i[clean:channels clean:subscriptions clean:events clean:fingerprint_subscriptions
+                   clean:topic_fingerprints]
 
     namespace :clean do
       # Clean up old channels

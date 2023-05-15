@@ -26,15 +26,10 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
+  spec.required_ruby_version = ">= 2.7.0"
+
   spec.add_dependency "anycable",      "~> 1.0"
   spec.add_dependency "anyway_config", ">= 1.3", "< 3"
   spec.add_dependency "graphql",       ">= 1.11", "< 3"
   spec.add_dependency "redis",         ">= 4.2.0"
-
-  spec.add_development_dependency "anycable-rails"
-  spec.add_development_dependency "bundler", "~> 2.0"
-  spec.add_development_dependency "rack"
-  spec.add_development_dependency "railties"
-  spec.add_development_dependency "rake", ">= 12.3.3"
-  spec.add_development_dependency "rspec", "~> 3.0"
 end

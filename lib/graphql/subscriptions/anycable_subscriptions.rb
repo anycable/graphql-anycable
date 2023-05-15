@@ -4,7 +4,7 @@ require "anycable"
 require "graphql/subscriptions"
 require "graphql/anycable/errors"
 
-# rubocop: disable Metrics/AbcSize, Metrics/LineLength, Metrics/MethodLength
+# rubocop:disable Metrics/AbcSize, Metrics/LineLength, Metrics/MethodLength, Metrics/ClassLength
 
 # A subscriptions implementation that sends data as AnyCable broadcastings.
 #
@@ -73,20 +73,20 @@ module GraphQL
         fingerprints = redis.zrange(FINGERPRINTS_PREFIX + event.topic, 0, -1)
         return if fingerprints.empty?
 
-        fingerprint_subscription_ids = Hash[fingerprints.zip(
+        fingerprint_subscription_ids = fingerprints.zip(
           redis.pipelined do |pipeline|
             fingerprints.map do |fingerprint|
               pipeline.smembers(SUBSCRIPTIONS_PREFIX + fingerprint)
             end
-          end
-        )]
+          end,
+        ).to_h
 
         fingerprint_subscription_ids.each do |fingerprint, subscription_ids|
           execute_grouped(fingerprint, subscription_ids, event, object)
         end
 
         # Call to +trigger+ returns this. Convenient for playing in console
-        Hash[fingerprint_subscription_ids.map { |k,v| [k, v.size] }]
+        fingerprint_subscription_ids.transform_values(&:size)
       end
 
       # The fingerprint has told us that this response should be shared by all subscribers,
@@ -118,6 +118,7 @@ module GraphQL
         anycable.broadcast(stream_key, payload)
       end
 
+      # rubocop:disable Metrics/CyclomaticComplexity
       # Save query to "storage" (in redis)
       def write_subscription(query, events)
         context = query.context.to_h
@@ -131,7 +132,6 @@ module GraphQL
         # Store subscription_id in the channel state to cleanup on disconnect
         write_subscription_id(channel, channel_uniq_id)
 
-
         events.each do |event|
           channel.stream_from(SUBSCRIPTIONS_PREFIX + event.fingerprint)
         end
@@ -141,7 +141,7 @@ module GraphQL
           variables: query.provided_variables.to_json,
           context: @serializer.dump(context.to_h),
           operation_name: query.operation_name,
-          events: events.map { |e| [e.topic, e.fingerprint] }.to_h.to_json,
+          events: events.to_h { |e| [e.topic, e.fingerprint] }.to_json,
         }
 
         redis.multi do |pipeline|
@@ -152,18 +152,20 @@ module GraphQL
             pipeline.sadd(SUBSCRIPTIONS_PREFIX + event.fingerprint, [subscription_id])
           end
           next unless config.subscription_expiration_seconds
+
           pipeline.expire(CHANNEL_PREFIX + channel_uniq_id, config.subscription_expiration_seconds)
           pipeline.expire(SUBSCRIPTION_PREFIX + subscription_id, config.subscription_expiration_seconds)
         end
       end
+      # rubocop:enable Metrics/CyclomaticComplexity
 
       # Return the query from "storage" (in redis)
       def read_subscription(subscription_id)
         redis.mapped_hmget(
           "#{SUBSCRIPTION_PREFIX}#{subscription_id}",
-          :query_string, :variables, :context, :operation_name
+          :query_string, :variables, :context, :operation_name,
         ).tap do |subscription|
-          return if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
+          break if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
 
           subscription[:context] = @serializer.load(subscription[:context])
           subscription[:variables] = JSON.parse(subscription[:variables])
@@ -187,7 +189,7 @@ module GraphQL
         # Clean up fingerprints that doesn't have any subscriptions left
         redis.pipelined do |pipeline|
           fingerprint_subscriptions.each do |key, score|
-            pipeline.zremrangebyscore(key, '-inf', '0') if score.value.zero?
+            pipeline.zremrangebyscore(key, "-inf", "0") if score.value.zero?
           end
         end
       end
@@ -242,4 +244,4 @@ module GraphQL
     end
   end
 end
-# rubocop: enable Metrics/AbcSize, Metrics/LineLength, Metrics/MethodLength
+# rubocop:enable Metrics/AbcSize, Metrics/LineLength, Metrics/MethodLength, Metrics/ClassLength

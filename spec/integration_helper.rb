@@ -3,15 +3,15 @@
 require "anycable/rspec"
 require "rack"
 
-RSpec.shared_context "rpc" do
+RSpec.shared_context "with rpc" do
   include_context "anycable:rpc:command"
 
   let(:user) { "john" }
   let(:schema) { nil }
-  let(:identifiers) { {current_user: "john", schema: schema.to_s} }
+  let(:identifiers) { { current_user: "john", schema: schema.to_s } }
   let(:channel_class) { "GraphqlChannel" }
-  let(:channel_params) { {channelId: rand(1000).to_s} }
-  let(:channel_identifier) { {channel: channel_class}.merge(channel_params) }
+  let(:channel_params) { { channelId: rand(1000).to_s } }
+  let(:channel_identifier) { { channel: channel_class }.merge(channel_params) }
   let(:channel_id) { channel_identifier.to_json }
 
   let(:handler) { AnyCable::RPC::Handler.new }
@@ -26,6 +26,10 @@ class FakeConnection
       @connection = connection
       @identifier = identifier
       @params = params
+    end
+
+    def id
+      @params["channelId"]
     end
 
     def stream_from(broadcasting)
@@ -46,36 +50,36 @@ class FakeConnection
     @subscriptions = subscriptions
   end
 
+  # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
   def handle_channel_command(identifier, command, data)
     parsed_id = JSON.parse(identifier)
 
     parsed_id.delete("channel")
     channel = Channel.new(self, identifier, parsed_id)
 
-    res =
-      case command
-      when "message"
-        data = JSON.parse(data)
-        result = 
-          schema.execute(
-            query: data["query"],
-            context: identifiers.merge(channel: channel),
-            variables: Hash(data["variables"]),
-            operation_name: data["operationName"],
-          )
-
-        transmit(
-          result: result.subscription? ? { data: nil } : result.to_h,
-          more: result.subscription?,
+    case command
+    when "message"
+      data = JSON.parse(data)
+      result =
+        schema.execute(
+          query: data["query"],
+          context: identifiers.merge(channel: channel),
+          variables: Hash(data["variables"]),
+          operation_name: data["operationName"],
         )
-      when "unsubscribe"
-        schema.subscriptions.delete_channel_subscriptions(channel)
-        true
-      else
-        raise "Unknown command"
-      end
-    res
+
+      transmit(
+        result: result.subscription? ? { data: nil } : result.to_h,
+        more: result.subscription?,
+      )
+    when "unsubscribe"
+      schema.subscriptions.delete_channel_subscriptions(channel)
+      true
+    else
+      raise "Unknown command"
+    end
   end
+  # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
   def transmit(data)
     socket.transmit data.to_json
@@ -87,7 +91,7 @@ class FakeConnection
 
   def close
     socket.close
-  end 
+  end
 end
 
 AnyCable.connection_factory = ->(socket, **options) { FakeConnection.new(socket, **options) }
@@ -102,5 +106,5 @@ RSpec.configure do |config|
     metadata[:integration] = true
   end
 
-  config.include_context "rpc", integration: true
+  config.include_context "with rpc", integration: true
 end

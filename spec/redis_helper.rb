@@ -11,7 +11,7 @@ end
 setup_redis_test_db
 
 RSpec.configure do |config|
-  config.before(:example) do
+  config.before do
     GraphQL::AnyCable.redis.flushdb
   end
 end

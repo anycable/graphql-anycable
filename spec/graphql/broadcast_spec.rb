@@ -11,13 +11,13 @@ RSpec.describe "Broadcasting" do
   end
 
   let(:channel) do
-    socket = double("Socket", istate: AnyCable::Socket::State.new({}))
-    connection = double("Connection", anycable_socket: socket)
-    double("Channel", connection: connection)
+    socket = instance_double(AnyCable::Socket, istate: AnyCable::Socket::State.new({}))
+    connection = instance_double(FakeConnection, anycable_socket: socket)
+    instance_double(FakeConnection::Channel, connection: connection)
   end
 
   let(:object) do
-    double("Post", id: 1, title: "Broadcasting…", actions: %w[Edit Delete])
+    double(Post, id: 1, title: "Broadcasting…", actions: %w[Edit Delete]) # rubocop:disable RSpec/VerifiedDoubles
   end
 
   let(:query) do
