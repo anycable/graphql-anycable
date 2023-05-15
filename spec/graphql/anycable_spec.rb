@@ -47,8 +47,8 @@ RSpec.describe GraphQL::AnyCable do
 
   before do
     allow(anycable).to receive(:broadcast)
-    allow_any_instance_of(GraphQL::Subscriptions::Event).to receive(:fingerprint).and_return(fingerprint)
-    allow_any_instance_of(GraphQL::Subscriptions).to receive(:build_id).and_return("ohmycables")
+    allow_any_instance_of(GraphQL::Subscriptions::Event).to receive(:fingerprint).and_return(fingerprint) # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(GraphQL::Subscriptions).to receive(:build_id).and_return("ohmycables") # rubocop:disable RSpec/AnyInstance
   end
 
   it "subscribes channel to stream updates from GraphQL subscription" do
