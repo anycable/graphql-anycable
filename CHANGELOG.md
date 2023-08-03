@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.1.6 - 2023-08-03
+
+### Fixed
+
+- Fix empty operation name handling when using redis-client or redis.rb v5. [@ilyasgaraev] ([#34](https://github.com/anycable/graphql-anycable/pull/34))
+- Fix deprecation warnings for redis.rb v4.8+ and support for redis.rb v5. [@smasry] ([#29](https://github.com/anycable/graphql-anycable/pull/29))
+
 ## 1.1.5 - 2022-10-26
 
 - Fix that deprecation warning about `config.use_client_provided_uniq_id` again, so it can be issued outside of Rails. [@gsamokovarov] ([#27](https://github.com/anycable/graphql-anycable/pull/27))
@@ -168,6 +175,8 @@ Technical release to test publishing via GitHub Actions.
 
 Initial version: store subscriptions on redis, re-execute queries in sync. [@Envek]
 
+[@ilyasgaraev]: https://github.com/ilyasgaraev "Ilyas Garaev"
+[@smasry]: https://github.com/smasry "Samer Masry"
 [@gsamokovarov]: https://github.com/gsamokovarov "Genadi Samokovarov"
 [@bibendi]: https://github.com/bibendi "Misha Merkushin"
 [@FX-HAO]: https://github.com/FX-HAO "Fuxin Hao"
