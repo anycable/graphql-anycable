@@ -89,6 +89,28 @@ RSpec.describe GraphQL::AnyCable do
     end
   end
 
+  context "with empty operation name" do
+    subject do
+      AnycableSchema.execute(
+        query: query,
+        context: { channel: channel, subscription_id: subscription_id },
+        variables: {},
+        operation_name: nil,
+      )
+    end
+
+    let(:query) do
+      <<~GRAPHQL
+        subscription { productUpdated { id } }
+      GRAPHQL
+    end
+
+    it "subscribes channel to stream updates from GraphQL subscription" do
+      subject
+      expect(channel).to have_received(:stream_from).with("graphql-subscriptions:#{fingerprint}")
+    end
+  end
+
   describe ".delete_channel_subscriptions" do
     before do
       GraphQL::AnyCable.config.use_client_provided_uniq_id = false
