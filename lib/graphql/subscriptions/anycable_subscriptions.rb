@@ -140,7 +140,7 @@ module GraphQL
           query_string: query.query_string,
           variables: query.provided_variables.to_json,
           context: @serializer.dump(context.to_h),
-          operation_name: query.operation_name,
+          operation_name: query.operation_name.to_s,
           events: events.map { |e| [e.topic, e.fingerprint] }.to_h.to_json,
         }
 
