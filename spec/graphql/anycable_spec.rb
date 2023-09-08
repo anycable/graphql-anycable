@@ -113,7 +113,9 @@ RSpec.describe GraphQL::AnyCable do
 
   describe ".delete_channel_subscriptions" do
     context "with default config.redis-prefix" do
-      before do
+      around do |ex|
+        GraphQL::AnyCable.config.use_client_provided_uniq_id = false
+        ex.run
         GraphQL::AnyCable.config.use_client_provided_uniq_id = false
       end
 
@@ -124,10 +126,6 @@ RSpec.describe GraphQL::AnyCable do
           variables: {},
           operation_name: "SomeSubscription",
           )
-      end
-
-      after do
-        GraphQL::AnyCable.config.use_client_provided_uniq_id = false
       end
 
       let(:redis) { AnycableSchema.subscriptions.redis }
@@ -148,9 +146,15 @@ RSpec.describe GraphQL::AnyCable do
     end
 
     context "with different config.redis-prefix" do
-      before do
+      around do |ex|
+        old_redis_prefix = GraphQL::AnyCable.config.redis_prefix
         GraphQL::AnyCable.config.use_client_provided_uniq_id = false
         GraphQL::AnyCable.config.redis_prefix = "graphql-test"
+
+        ex.run
+
+        GraphQL::AnyCable.config.use_client_provided_uniq_id = false
+        GraphQL::AnyCable.config.redis_prefix = old_redis_prefix
       end
 
       before do
@@ -160,11 +164,6 @@ RSpec.describe GraphQL::AnyCable do
           variables: {},
           operation_name: "SomeSubscription",
           )
-      end
-
-      after do
-        GraphQL::AnyCable.config.use_client_provided_uniq_id = false
-        GraphQL::AnyCable.config.redis_prefix = "graphql"
       end
 
       let(:redis) { AnycableSchema.subscriptions.redis }
