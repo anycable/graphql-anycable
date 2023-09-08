@@ -241,19 +241,19 @@ module GraphQL
       end
 
       def full_subscription_prefix
-        "#{config.redis_prefix}#{SUBSCRIPTION_PREFIX}"
+        "#{config.redis_prefix}-#{SUBSCRIPTION_PREFIX}"
       end
 
       def full_fingerprints_prefix
-        "#{config.redis_prefix}#{FINGERPRINTS_PREFIX}"
+        "#{config.redis_prefix}-#{FINGERPRINTS_PREFIX}"
       end
 
       def full_subscriptions_prefix
-        "#{config.redis_prefix}#{SUBSCRIPTIONS_PREFIX}"
+        "#{config.redis_prefix}-#{SUBSCRIPTIONS_PREFIX}"
       end
 
       def full_channel_prefix
-        "#{config.redis_prefix}#{CHANNEL_PREFIX}"
+        "#{config.redis_prefix}-#{CHANNEL_PREFIX}"
       end
     end
   end

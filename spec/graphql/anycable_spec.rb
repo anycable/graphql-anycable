@@ -150,7 +150,7 @@ RSpec.describe GraphQL::AnyCable do
     context "with different config.redis-prefix" do
       before do
         GraphQL::AnyCable.config.use_client_provided_uniq_id = false
-        Thread.current[:graphql_anycable_redis_prefix] = "graphql-thread-"
+        GraphQL::AnyCable.config.redis_prefix = "graphql-test"
       end
 
       before do
@@ -164,7 +164,7 @@ RSpec.describe GraphQL::AnyCable do
 
       after do
         GraphQL::AnyCable.config.use_client_provided_uniq_id = false
-        Thread.current[:graphql_anycable_redis_prefix] = "graphql-"
+        GraphQL::AnyCable.config.redis_prefix = "graphql"
       end
 
       let(:redis) { AnycableSchema.subscriptions.redis }
@@ -174,13 +174,13 @@ RSpec.describe GraphQL::AnyCable do
       end
 
       it "removes subscription from redis" do
-        expect(redis.exists?("graphql-thread-subscription:some-truly-random-number")).to be true
-        expect(redis.exists?("graphql-thread-channel:some-truly-random-number")).to be true
-        expect(redis.exists?("graphql-thread-fingerprints::productUpdated:")).to be true
+        expect(redis.exists?("graphql-test-subscription:some-truly-random-number")).to be true
+        expect(redis.exists?("graphql-test-channel:some-truly-random-number")).to be true
+        expect(redis.exists?("graphql-test-fingerprints::productUpdated:")).to be true
         subject
-        expect(redis.exists?("graphql-thread-channel:some-truly-random-number")).to be false
-        expect(redis.exists?("graphql-thread-fingerprints::productUpdated:")).to be false
-        expect(redis.exists?("graphql-thread-subscription:some-truly-random-number")).to be false
+        expect(redis.exists?("graphql-test-channel:some-truly-random-number")).to be false
+        expect(redis.exists?("graphql-test-fingerprints::productUpdated:")).to be false
+        expect(redis.exists?("graphql-test-subscription:some-truly-random-number")).to be false
       end
     end
   end
@@ -241,6 +241,24 @@ RSpec.describe GraphQL::AnyCable do
         GraphQL::AnyCable::ChannelConfigurationError,
         /ActionCable channel wasn't provided in the context for GraphQL query execution!/,
       )
+    end
+  end
+
+  describe ".config" do
+    it "returns the default redis_prefix" do
+      expect(GraphQL::AnyCable.config.redis_prefix).to eq("graphql")
+    end
+
+    context "when changed redis_prefix" do
+      after do
+        GraphQL::AnyCable.config.redis_prefix = "graphql"
+      end
+
+      it "writes a new value to redis_prefix" do
+        GraphQL::AnyCable.config.redis_prefix = "new-graphql"
+
+        expect(GraphQL::AnyCable.config.redis_prefix).to eq("new-graphql")
+      end
     end
   end
 end

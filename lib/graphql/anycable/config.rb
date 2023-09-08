@@ -11,11 +11,7 @@ module GraphQL
       attr_config subscription_expiration_seconds: nil
       attr_config use_redis_object_on_cleanup: true
       attr_config use_client_provided_uniq_id: true
-      attr_config redis_prefix: "graphql-"
-
-      def redis_prefix
-        Thread.current[:graphql_anycable_redis_prefix] || super
-      end
+      attr_config redis_prefix: "graphql"
     end
   end
 end
