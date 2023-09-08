@@ -70,13 +70,13 @@ module GraphQL
       # An event was triggered.
       # Re-evaluate all subscribed queries and push the data over ActionCable.
       def execute_all(event, object)
-        fingerprints = redis.zrange(full_fingerprints_prefix + event.topic, 0, -1)
+        fingerprints = redis.zrange(redis_key(FINGERPRINTS_PREFIX) + event.topic, 0, -1)
         return if fingerprints.empty?
 
         fingerprint_subscription_ids = Hash[fingerprints.zip(
           redis.pipelined do |pipeline|
             fingerprints.map do |fingerprint|
-              pipeline.smembers(full_subscriptions_prefix + fingerprint)
+              pipeline.smembers(redis_key(SUBSCRIPTIONS_PREFIX) + fingerprint)
             end
           end
         )]
@@ -94,14 +94,14 @@ module GraphQL
       def execute_grouped(fingerprint, subscription_ids, event, object)
         return if subscription_ids.empty?
 
-        subscription_id = subscription_ids.find { |sid| redis.exists?(full_subscription_prefix + sid) }
+        subscription_id = subscription_ids.find { |sid| redis.exists?(redis_key(SUBSCRIPTION_PREFIX) + sid) }
         return unless subscription_id # All subscriptions has expired but haven't cleaned up yet
 
         result = execute_update(subscription_id, event, object)
         return unless result
 
         # Having calculated the result _once_, send the same payload to all subscribers
-        deliver(full_subscriptions_prefix + fingerprint, result)
+        deliver(redis_key(SUBSCRIPTIONS_PREFIX) + fingerprint, result)
       end
 
       # Disable this method as there is no fingerprint (it can be retrieved from subscription though)
@@ -133,7 +133,7 @@ module GraphQL
 
 
         events.each do |event|
-          channel.stream_from(full_subscriptions_prefix + event.fingerprint)
+          channel.stream_from(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint)
         end
 
         data = {
@@ -145,22 +145,22 @@ module GraphQL
         }
 
         redis.multi do |pipeline|
-          pipeline.sadd(full_channel_prefix + channel_uniq_id, [subscription_id])
-          pipeline.mapped_hmset(full_subscription_prefix + subscription_id, data)
+          pipeline.sadd(redis_key(CHANNEL_PREFIX) + channel_uniq_id, [subscription_id])
+          pipeline.mapped_hmset(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, data)
           events.each do |event|
-            pipeline.zincrby(full_fingerprints_prefix + event.topic, 1, event.fingerprint)
-            pipeline.sadd(full_subscriptions_prefix + event.fingerprint, [subscription_id])
+            pipeline.zincrby(redis_key(FINGERPRINTS_PREFIX) + event.topic, 1, event.fingerprint)
+            pipeline.sadd(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint, [subscription_id])
           end
           next unless config.subscription_expiration_seconds
-          pipeline.expire(full_channel_prefix + channel_uniq_id, config.subscription_expiration_seconds)
-          pipeline.expire(full_subscription_prefix + subscription_id, config.subscription_expiration_seconds)
+          pipeline.expire(redis_key(CHANNEL_PREFIX) + channel_uniq_id, config.subscription_expiration_seconds)
+          pipeline.expire(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, config.subscription_expiration_seconds)
         end
       end
 
       # Return the query from "storage" (in redis)
       def read_subscription(subscription_id)
         redis.mapped_hmget(
-          "#{full_subscription_prefix}#{subscription_id}",
+          "#{redis_key(SUBSCRIPTION_PREFIX)}#{subscription_id}",
           :query_string, :variables, :context, :operation_name
         ).tap do |subscription|
           return if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
@@ -172,17 +172,17 @@ module GraphQL
       end
 
       def delete_subscription(subscription_id)
-        events = redis.hget(full_subscription_prefix + subscription_id, :events)
+        events = redis.hget(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, :events)
         events = events ? JSON.parse(events) : {}
         fingerprint_subscriptions = {}
         redis.pipelined do |pipeline|
           events.each do |topic, fingerprint|
-            pipeline.srem(full_subscriptions_prefix + fingerprint, subscription_id)
-            score = pipeline.zincrby(full_fingerprints_prefix + topic, -1, fingerprint)
-            fingerprint_subscriptions[full_fingerprints_prefix + topic] = score
+            pipeline.srem(redis_key(SUBSCRIPTIONS_PREFIX) + fingerprint, subscription_id)
+            score = pipeline.zincrby(redis_key(FINGERPRINTS_PREFIX) + topic, -1, fingerprint)
+            fingerprint_subscriptions[redis_key(FINGERPRINTS_PREFIX) + topic] = score
           end
           # Delete subscription itself
-          pipeline.del(full_subscription_prefix + subscription_id)
+          pipeline.del(redis_key(SUBSCRIPTION_PREFIX) + subscription_id)
         end
         # Clean up fingerprints that doesn't have any subscriptions left
         redis.pipelined do |pipeline|
@@ -200,10 +200,10 @@ module GraphQL
         # Missing in case disconnect happens before #execute
         return unless channel_id
 
-        redis.smembers(full_channel_prefix + channel_id).each do |subscription_id|
+        redis.smembers(redis_key(CHANNEL_PREFIX) + channel_id).each do |subscription_id|
           delete_subscription(subscription_id)
         end
-        redis.del(full_channel_prefix + channel_id)
+        redis.del(redis_key(CHANNEL_PREFIX) + channel_id)
       end
 
       private
@@ -240,20 +240,8 @@ module GraphQL
         end
       end
 
-      def full_subscription_prefix
-        "#{config.redis_prefix}-#{SUBSCRIPTION_PREFIX}"
-      end
-
-      def full_fingerprints_prefix
-        "#{config.redis_prefix}-#{FINGERPRINTS_PREFIX}"
-      end
-
-      def full_subscriptions_prefix
-        "#{config.redis_prefix}-#{SUBSCRIPTIONS_PREFIX}"
-      end
-
-      def full_channel_prefix
-        "#{config.redis_prefix}-#{CHANNEL_PREFIX}"
+      def redis_key(prefix)
+        "#{config.redis_prefix}-#{prefix}"
       end
     end
   end
