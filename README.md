@@ -203,6 +203,98 @@ As in AnyCable there is no place to store subscription data in-memory, it should
     => 52ee8d65-275e-4d22-94af-313129116388
     ```
 
+## Stats
+
+You can grab Redis subscription statistics by calling
+
+```ruby
+    GraphQL::AnyCable.stats
+```
+
+It will return a total of the amount of the key with the following prefixes
+
+```
+    graphql-subscription
+    graphql-fingerprints
+    graphql-subscriptions
+    graphql-channel
+```
+
+The response will look like this
+
+```json
+  {
+    "total": {
+      "subscription":22646,
+      "fingerprints":3200,
+      "subscriptions":20101,
+      "channel": 4900
+    }
+  }
+```
+
+You can also grab the number of subscribers grouped by subscriptions
+
+```ruby
+    GraphQL::AnyCable.stats(include_subscriptions: true)
+```
+
+It will return the response that contains `subscriptions`
+
+```json
+  {
+    "total": {
+      "subscription":22646,
+      "fingerprints":3200,
+      "subscriptions":20101,
+      "channel": 4900
+    },
+    "subscriptions": {
+      "productCreated": 11323,
+      "productUpdated": 11323
+    }
+  }
+```
+
+We can set this data to  [Yabeda] for tracking amount of subscriptions
+
+```ruby
+  # config/initializers/metrics.rb
+  Yabeda.configure do
+    group :graphql_anycable_statistics do
+      gauge :subscriptions_count,  comment: "Number of graphql-anycable subscriptions"
+    end
+  end
+```
+
+```ruby
+  # in your app
+  statistics = GraphQL::AnyCable.stats[:total]
+
+  statistics.each do |key , value|
+    Yabeda.graphql_anycable_statistics.subscriptions_count.set({name: key}, value)
+  end
+```
+
+Or you can use `collect`
+```ruby
+  # config/initializers/metrics.rb
+  Yabeda.configure do
+    group :graphql_anycable_statistics do
+      gauge :subscriptions_count,  comment: "Number of graphql-anycable subscriptions"
+    end
+    
+    collect do
+      statistics = GraphQL::AnyCable.stats[:total]
+
+      statistics.each do |redis_prefix, value|
+        graphql_anycable_statistics.subscriptions_count.set({name: redis_prefix}, value)
+      end
+    end
+  end
+```
+
+
 ## Testing applications which use `graphql-anycable`
 
 You can pass custom redis-server URL to AnyCable using ENV variable.
@@ -262,3 +354,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 [AnyCable]: https://github.com/anycable/anycable "Polyglot replacement for Ruby WebSocket servers with Action Cable protocol"
 [LiteCable]: https://github.com/palkan/litecable "Lightweight Action Cable implementation (Rails-free)"
 [anyway_config]: https://github.com/palkan/anyway_config "Ruby libraries and applications configuration on steroids!"
+[Yabeda]: https://github.com/yabeda-rb/yabeda "Extendable solution for easy setup of monitoring in your Ruby apps"
