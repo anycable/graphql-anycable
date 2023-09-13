@@ -11,6 +11,7 @@ module GraphQL
       attr_config subscription_expiration_seconds: nil
       attr_config use_redis_object_on_cleanup: true
       attr_config use_client_provided_uniq_id: true
+      attr_config redis_prefix: "graphql" # Here, we set clear redis_prefix without any hyphen. The hyphen is added at the end of this value on our side.
     end
   end
 end

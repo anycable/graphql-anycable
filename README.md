@@ -141,6 +141,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS=604800
     GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP=true
     GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID=false
+    GRAPHQL_ANYCABLE_REDIS_PREFIX=graphql
     ```
 
  2. YAML configuration files (note that this is `config/graphql_anycable.yml`, *not* `config/anycable.yml`):
@@ -151,6 +152,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
       subscription_expiration_seconds: 300 # 5 minutes
       use_redis_object_on_cleanup: false # For restricted redis installations
       use_client_provided_uniq_id: false # To avoid problems with non-uniqueness of Apollo channel identifiers
+      redis_prefix: graphql # You can configure redis_prefix for anycable-graphql subscription prefixes. Default value "graphql"
     ```
 
  3. Configuration from your application code:
@@ -158,6 +160,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     ```ruby
     GraphQL::AnyCable.configure do |config|
       config.subscription_expiration_seconds = 3600 # 1 hour
+      config.redis_prefix = "graphql" # on our side, we add `-` ourselves after the redis_prefix
     end
     ```
 
