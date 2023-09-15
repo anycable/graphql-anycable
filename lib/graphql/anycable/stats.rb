@@ -8,13 +8,11 @@ module GraphQL
     class Stats
       SCAN_COUNT_RECORDS_AMOUNT = 1_000
 
-      attr_reader :redis, :config, :list_prefixes_keys, :include_subscriptions
+      attr_reader :scan_count, :include_subscriptions
 
-      def initialize(redis:, config:, include_subscriptions: false)
-        @redis = redis
-        @config = config
+      def initialize(scan_count: SCAN_COUNT_RECORDS_AMOUNT, include_subscriptions: false)
+        @scan_count = scan_count
         @include_subscriptions = include_subscriptions
-        @list_prefix_keys = list_prefixes_keys
       end
 
       def collect
@@ -34,12 +32,12 @@ module GraphQL
       private
 
       # Counting all keys, that match the pattern with iterating by count
-      def count_by_scan(match:, count: SCAN_COUNT_RECORDS_AMOUNT)
+      def count_by_scan(match:)
         sb_amount = 0
         cursor = '0'
 
         loop do
-          cursor, result = redis.scan(cursor, match: match, count: count)
+          cursor, result = redis.scan(cursor, match: match, count: scan_count)
           sb_amount += result.count
 
           break if cursor == '0'
@@ -51,7 +49,8 @@ module GraphQL
       # Calculate subscribes, grouped by subscriptions
       def group_subscription_stats
         subscription_groups = {}
-        redis.scan_each(match: "#{list_prefixes_keys[:fingerprints]}*", count: SCAN_COUNT_RECORDS_AMOUNT) do |fingerprint_key|
+
+        redis.scan_each(match: "#{list_prefixes_keys[:fingerprints]}*", count: scan_count) do |fingerprint_key|
           subscription_name = fingerprint_key.gsub(/#{list_prefixes_keys[:fingerprints]}|:/, "")
           subscription_groups[subscription_name] = 0
 
@@ -67,10 +66,6 @@ module GraphQL
         subscription_groups
       end
 
-      def adapter
-        GraphQL::Subscriptions::AnyCableSubscriptions
-      end
-
       def list_prefixes_keys
         {
           subscription: redis_key(adapter::SUBSCRIPTION_PREFIX),
@@ -78,6 +73,18 @@ module GraphQL
           subscriptions: redis_key(adapter::SUBSCRIPTIONS_PREFIX),
           channel: redis_key(adapter::CHANNEL_PREFIX)
         }
+      end
+
+      def adapter
+        GraphQL::Subscriptions::AnyCableSubscriptions
+      end
+
+      def redis
+        GraphQL::AnyCable.redis
+      end
+
+      def config
+        GraphQL::AnyCable.config
       end
 
       def redis_key(prefix)

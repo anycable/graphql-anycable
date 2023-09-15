@@ -30,12 +30,7 @@ RSpec.describe GraphQL::AnyCable::Stats do
       )
     end
 
-    let(:redis) { AnycableSchema.subscriptions.redis }
-    let(:config) { GraphQL::AnyCable.config }
-
     context "when include_subscriptions is false" do
-      subject { described_class.new(redis: redis, config: config) }
-
       let(:expected_result) do
         {total: {subscription: 1, fingerprints: 2, subscriptions: 2, channel: 1}}
       end
@@ -46,7 +41,7 @@ RSpec.describe GraphQL::AnyCable::Stats do
     end
 
     context "when include_subscriptions is true" do
-      subject { described_class.new(redis: redis, config: config, include_subscriptions: true) }
+      subject { described_class.new(include_subscriptions: true) }
 
       let(:expected_result) do
         {

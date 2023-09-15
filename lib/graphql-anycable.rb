@@ -21,8 +21,8 @@ module GraphQL
       schema.use GraphQL::Subscriptions::AnyCableSubscriptions, **options
     end
 
-    def self.stats(include_subscriptions: false)
-      AnyCable::Stats.new(redis: redis, config: config, include_subscriptions: include_subscriptions).collect
+    def self.stats(**options)
+      Stats.new(**options).collect
     end
 
     module_function

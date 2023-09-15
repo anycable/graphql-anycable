@@ -256,7 +256,14 @@ It will return the response that contains `subscriptions`
   }
 ```
 
-We can set this data to  [Yabeda] for tracking amount of subscriptions
+Also, you can set another `scan_count`, if needed.
+The default value is 1_000
+
+```ruby
+    GraphQL::AnyCable.stats(scan_count: 100)
+```
+
+We can set statistics data to [Yabeda][] for tracking amount of subscriptions
 
 ```ruby
   # config/initializers/metrics.rb
