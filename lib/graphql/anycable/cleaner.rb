@@ -16,7 +16,7 @@ module GraphQL
         return unless config.subscription_expiration_seconds
         return unless config.use_redis_object_on_cleanup
 
-        redis.scan_each(match: "#{adapter::CHANNEL_PREFIX}*") do |key|
+        redis.scan_each(match: "#{redis_key(adapter::CHANNEL_PREFIX)}*") do |key|
           idle = redis.object("IDLETIME", key)
           next if idle&.<= config.subscription_expiration_seconds
 
@@ -28,7 +28,7 @@ module GraphQL
         return unless config.subscription_expiration_seconds
         return unless config.use_redis_object_on_cleanup
 
-        redis.scan_each(match: "#{adapter::SUBSCRIPTION_PREFIX}*") do |key|
+        redis.scan_each(match: "#{redis_key(adapter::SUBSCRIPTION_PREFIX)}*") do |key|
           idle = redis.object("IDLETIME", key)
           next if idle&.<= config.subscription_expiration_seconds
 
@@ -37,9 +37,9 @@ module GraphQL
       end
 
       def clean_fingerprint_subscriptions
-        redis.scan_each(match: "#{adapter::SUBSCRIPTIONS_PREFIX}*") do |key|
+        redis.scan_each(match: "#{redis_key(adapter::SUBSCRIPTIONS_PREFIX)}*") do |key|
           redis.smembers(key).each do |subscription_id|
-            next if redis.exists?(adapter::SUBSCRIPTION_PREFIX + subscription_id)
+            next if redis.exists?(redis_key(adapter::SUBSCRIPTION_PREFIX) + subscription_id)
 
             redis.srem(key, subscription_id)
           end
@@ -47,10 +47,10 @@ module GraphQL
       end
 
       def clean_topic_fingerprints
-        redis.scan_each(match: "#{adapter::FINGERPRINTS_PREFIX}*") do |key|
+        redis.scan_each(match: "#{redis_key(adapter::FINGERPRINTS_PREFIX)}*") do |key|
           redis.zremrangebyscore(key, '-inf', '0')
           redis.zrange(key, 0, -1).each do |fingerprint|
-            next if redis.exists?(adapter::SUBSCRIPTIONS_PREFIX + fingerprint)
+            next if redis.exists?(redis_key(adapter::SUBSCRIPTIONS_PREFIX) + fingerprint)
 
             redis.zrem(key, fingerprint)
           end
@@ -69,6 +69,10 @@ module GraphQL
 
       def config
         GraphQL::AnyCable.config
+      end
+
+      def redis_key(prefix)
+        "#{config.redis_prefix}-#{prefix}"
       end
     end
   end
