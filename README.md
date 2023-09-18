@@ -131,6 +131,12 @@ To avoid filling Redis storage with stale subscription data:
 
     Heroku users should set up `use_redis_object_on_cleanup` setting to `false` due to [limitations in Heroku Redis](https://devcenter.heroku.com/articles/heroku-redis#connection-permissions).
 
+### Recommendations
+
+You should run `GraphQL::AnyCable::Cleaner` or `rake graphql:anycable:clean` periodically because it helps to avoid swelling of RAM consumption, 
+but before using `GraphQL::AnyCable::Cleaner` or `rake graphql:anycable:clean`, you should configure `subscription_expiration_seconds`
+and `use_redis_object_on_cleanup` settings
+
 ## Configuration
 
 GraphQL-AnyCable uses [anyway_config] to configure itself. There are several possibilities to configure this gem:
