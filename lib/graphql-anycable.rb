@@ -6,6 +6,7 @@ require_relative "graphql/anycable/version"
 require_relative "graphql/anycable/cleaner"
 require_relative "graphql/anycable/config"
 require_relative "graphql/anycable/railtie" if defined?(Rails)
+require_relative "graphql/anycable/stats"
 require_relative "graphql/subscriptions/anycable_subscriptions"
 
 module GraphQL
@@ -18,6 +19,10 @@ module GraphQL
       end
 
       schema.use GraphQL::Subscriptions::AnyCableSubscriptions, **options
+    end
+
+    def self.stats(**options)
+      Stats.new(**options).collect
     end
 
     module_function

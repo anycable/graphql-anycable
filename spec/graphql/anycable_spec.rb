@@ -260,4 +260,12 @@ RSpec.describe GraphQL::AnyCable do
       end
     end
   end
+
+  describe ".stats" do
+    it "calls Graphql::AnyCable::Stats" do
+      allow_any_instance_of(GraphQL::AnyCable::Stats).to receive(:collect)
+
+      described_class.stats
+    end
+  end
 end
