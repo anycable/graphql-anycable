@@ -166,6 +166,42 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
 
 And any other way provided by [anyway_config]. Check its documentation!
 
+## Emergency actions
+In situations when you don't set `subscription_expiration_seconds`, have a lot of inactive subscriptions, and `GraphQL::AnyCable::Cleaner` does`t help in that, 
+you can do the following actions for clearing subscriptions
+
+1. Set `config.subscription_expiration_seconds`. After that, the new subscriptions will have `TTL`
+2. Run the script
+```ruby
+   redis = GraphQL::AnyCable.redis
+   config = GraphQL::AnyCable.config
+   
+   # do it for subscriptions
+   redis.scan_each("graphql-subscription:*") do |key|
+     redis.expire(key, config.subscription_expiration_seconds) if redis.ttl(key) < 0
+     # or you can just remove it immediately
+     # redis.del(key) if redis.ttl(key) < 0
+   end
+
+   # do it for channels
+   redis.scan_each("graphql-channel:*") do |key|
+     redis.expire(key, config.subscription_expiration_seconds) if redis.ttl(key) < 0
+     # or you can just remove it immediately
+     # redis.del(key) if redis.ttl(key) < 0
+   end
+```
+
+Or you can change the `redis_prefix` in the `configuration` and then remove all records with the old_prefix 
+For instance:
+
+1. Change the `redis_prefix`. The default `redis_prefix` is `graphql`
+2. Run the ruby script, which remove all records with `old prefix`
+```ruby
+  redis.scan_each("graphql-*") do |key|
+    redis.del(key)
+  end
+```
+
 ## Data model
 
 As in AnyCable there is no place to store subscription data in-memory, it should be persisted somewhere to be retrieved on `GraphQLSchema.subscriptions.trigger` and sent to subscribed clients. `graphql-anycable` uses the same Redis database as AnyCable itself.
