@@ -156,15 +156,12 @@ module GraphQL
             pipeline.sadd(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint, [subscription_id])
           end
 
-          # add the records to the storages if subscription_expiration_seconds is nil
-          unless config.subscription_expiration_seconds
-            current_timestamp = Time.now.to_i
+          current_timestamp = Time.now.to_i
 
-            pipeline.zadd(redis_key(SUBSCRIPTIONS_STORAGE_TIME), current_timestamp, full_subscription_id)
-            pipeline.zadd(redis_key(CHANNELS_STORAGE_TIME), current_timestamp, full_channel_id)
+          pipeline.zadd(redis_key(SUBSCRIPTIONS_STORAGE_TIME), current_timestamp, full_subscription_id)
+          pipeline.zadd(redis_key(CHANNELS_STORAGE_TIME), current_timestamp, full_channel_id)
 
-            next
-          end
+          next unless config.subscription_expiration_seconds
 
           pipeline.expire(full_channel_id, config.subscription_expiration_seconds)
           pipeline.expire(full_subscription_id, config.subscription_expiration_seconds)

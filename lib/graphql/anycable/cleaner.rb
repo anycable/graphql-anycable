@@ -14,22 +14,26 @@ module GraphQL
         clean_topic_fingerprints
       end
 
-      def clean_channels
-        return unless config.subscription_expiration_seconds
+      def clean_channels(expiration_seconds = nil)
+        expiration_seconds ||= config.subscription_expiration_seconds
+
+        return if expiration_seconds.nil? || expiration_seconds.to_i.zero?
         return unless config.use_redis_object_on_cleanup
 
         store_name = redis_key(adapter::CHANNELS_STORAGE_TIME)
 
-        remove_old_objects(store_name)
+        remove_old_objects(store_name, expiration_seconds.to_i)
       end
 
-      def clean_subscriptions
-        return unless config.subscription_expiration_seconds
+      def clean_subscriptions(expiration_seconds = nil)
+        expiration_seconds ||= config.subscription_expiration_seconds
+
+        return if expiration_seconds.nil? || expiration_seconds.to_i.zero?
         return unless config.use_redis_object_on_cleanup
 
         store_name = redis_key(adapter::SUBSCRIPTIONS_STORAGE_TIME)
 
-        remove_old_objects(store_name)
+        remove_old_objects(store_name, expiration_seconds.to_i)
       end
 
       # For cases, when we need to clear only `subscription time storage`
@@ -81,9 +85,9 @@ module GraphQL
         "#{config.redis_prefix}-#{prefix}"
       end
 
-      def remove_old_objects(store_name)
+      def remove_old_objects(store_name, expiration_seconds)
         # Determine the time point before which the keys should be deleted
-        time_point = (Time.now - config.subscription_expiration_seconds).to_i
+        time_point = (Time.now - expiration_seconds).to_i
 
         # iterating per 1000 records
         loop do

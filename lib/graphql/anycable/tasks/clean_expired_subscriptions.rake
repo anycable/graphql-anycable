@@ -9,13 +9,13 @@ namespace :graphql do
 
     namespace :clean do
       # Clean up old channels
-      task :channels do
-        GraphQL::AnyCable::Cleaner.clean_channels
+      task :channels, [:expire_seconds] do |_, args|
+        GraphQL::AnyCable::Cleaner.clean_channels(args[:expire_seconds]&.to_i)
       end
 
       # Clean up old subscriptions (they should have expired by themselves)
-      task :subscriptions do
-        GraphQL::AnyCable::Cleaner.clean_subscriptions
+      task :subscriptions, [:expire_seconds] do |_, args|
+        GraphQL::AnyCable::Cleaner.clean_subscriptions(args[:expire_seconds]&.to_i)
       end
 
       # Clean up subscription_ids from event fingerprints for expired subscriptions

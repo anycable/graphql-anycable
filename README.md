@@ -131,6 +131,20 @@ To avoid filling Redis storage with stale subscription data:
 
     Heroku users should set up `use_redis_object_on_cleanup` setting to `false` due to [limitations in Heroku Redis](https://devcenter.heroku.com/articles/heroku-redis#connection-permissions).
 
+You can also call specific commands `clean_channels` or `clean_subscriptions` with passed `subscription_expiration_seconds` as an argument.
+For instance
+
+```ruby
+  GraphQL::AnyCable::Cleaner.clean_channels(100)
+  # or
+  GraphQL::AnyCable::Cleaner.clean_subscriptions(100)
+```
+
+It will be helpful in cases when you have another value, `subscription_expiration_seconds` (or you don't have one) in `configuration`,
+but it needs to remove `subscriptions` and `channels` earlier without changing `subscription_expiration_seconds` in `configuration`
+
+You can't put a zero value for `clean_channels` or `clean_subscriptions` methods
+
 ### Recommendations
 
 You should run `GraphQL::AnyCable::Cleaner` or `rake graphql:anycable:clean` periodically because it helps to avoid swelling of RAM consumption, 
