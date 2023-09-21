@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "active_job"
+require "graphql/jobs/trigger_job"
+
 RSpec.describe GraphQL::AnyCable do
   subject do
     AnycableSchema.execute(
@@ -263,9 +266,94 @@ RSpec.describe GraphQL::AnyCable do
 
   describe ".stats" do
     it "calls Graphql::AnyCable::Stats" do
-      allow_any_instance_of(GraphQL::AnyCable::Stats).to receive(:collect)
+      expect_any_instance_of(GraphQL::AnyCable::Stats).to receive(:collect)
 
       described_class.stats
+    end
+  end
+
+  describe ".delivery_adapter" do
+    context "when config.delivery_method is inline" do
+      around do |ex|
+        old_value = GraphQL::AnyCable.config.delivery_method
+        GraphQL::AnyCable.config.delivery_method = "inline"
+
+        ex.run
+
+        GraphQL::AnyCable.config.delivery_method = old_value
+      end
+
+      it "calls InlineAdapter" do
+        expect(GraphQL::Adapters::InlineAdapter).to receive(:new).with(executor_object: "any_object")
+
+        described_class.delivery_adapter("any_object")
+      end
+    end
+
+    context "when config.delivery_method is active_job" do
+      around do |ex|
+        old_value = GraphQL::AnyCable.config.delivery_method
+        GraphQL::AnyCable.config.delivery_method = "active_job"
+
+        ex.run
+
+        GraphQL::AnyCable.config.delivery_method = old_value
+      end
+
+      it "calls ActiveJobAdapter" do
+        expect(GraphQL::Adapters::ActiveJobAdapter).to receive(:new).with(executor_object: "any_object")
+
+        described_class.delivery_adapter("any_object")
+      end
+    end
+  end
+
+  describe ".delivery_method" do
+    let(:config) { GraphQL::AnyCable.config }
+
+    after do
+      config.delivery_method = "inline"
+      config.queue = "default"
+      config.job_class = "GraphQL::Jobs::TriggerJob"
+    end
+
+    it "changes config" do
+      expect(config.delivery_method).to eq("inline")
+      expect(config.queue).to eq("default")
+      expect(config.job_class).to eq("GraphQL::Jobs::TriggerJob")
+
+      described_class.delivery_method = :active_job, { queue: "test", job_class: "CustomJob" }
+
+      expect(config.delivery_method).to eq(:active_job)
+      expect(config.queue).to eq("test")
+      expect(config.job_class).to eq("CustomJob")
+    end
+
+    context "when entered empty delivery_method" do
+      it "raises an error" do
+        expect { described_class.delivery_method = nil }.to raise_error(
+          Anyway::Config::ValidationError,
+          /delivery_method can not be blank/,
+        )
+      end
+    end
+
+    context "when entered invalid queue" do
+      it "raises an error" do
+        expect { described_class.delivery_method = "inline", { queue: "" } }.to raise_error(
+          Anyway::Config::ValidationError,
+          /queue can not be blank/,
+        )
+      end
+    end
+
+    context "when entered invalid job_class" do
+      it "raises an error" do
+        expect { described_class.delivery_method = "inline", { job_class: "" } }.to raise_error(
+          Anyway::Config::ValidationError,
+          /job_class can not be blank/,
+        )
+      end
     end
   end
 end

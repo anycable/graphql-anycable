@@ -7,6 +7,7 @@ require_relative "graphql/anycable/cleaner"
 require_relative "graphql/anycable/config"
 require_relative "graphql/anycable/railtie" if defined?(Rails)
 require_relative "graphql/anycable/stats"
+require_relative "graphql/anycable/delivery_adapter"
 require_relative "graphql/subscriptions/anycable_subscriptions"
 
 module GraphQL
@@ -23,6 +24,19 @@ module GraphQL
 
     def self.stats(**options)
       Stats.new(**options).collect
+    end
+
+    def self.delivery_method=(args)
+      method_name, options = Array(args)
+      options ||= {}
+
+      config.delivery_method = method_name
+      config.queue = options[:queue] if options[:queue]
+      config.job_class = options[:job_class] if options[:job_class]
+    end
+
+    def self.delivery_adapter(object)
+      DeliveryAdapter.lookup(executor_object: object)
     end
 
     module_function
