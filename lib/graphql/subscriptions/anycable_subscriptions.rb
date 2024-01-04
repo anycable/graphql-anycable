@@ -3,7 +3,6 @@
 require "anycable"
 require "graphql/subscriptions"
 require "graphql/anycable/errors"
-
 # rubocop: disable Metrics/AbcSize, Metrics/LineLength, Metrics/MethodLength
 
 # A subscriptions implementation that sends data as AnyCable broadcastings.
@@ -56,10 +55,12 @@ module GraphQL
 
       def_delegators :"GraphQL::AnyCable", :redis, :config
 
-      SUBSCRIPTION_PREFIX  = "subscription:"  # HASH: Stores subscription data: query, context, …
-      FINGERPRINTS_PREFIX  = "fingerprints:"  # ZSET: To get fingerprints by topic
-      SUBSCRIPTIONS_PREFIX = "subscriptions:" # SET:  To get subscriptions by fingerprint
-      CHANNEL_PREFIX       = "channel:"       # SET:  Auxiliary structure for whole channel's subscriptions cleanup
+      SUBSCRIPTION_PREFIX  = "subscription:"                # HASH: Stores subscription data: query, context, …
+      FINGERPRINTS_PREFIX  = "fingerprints:"                # ZSET: To get fingerprints by topic
+      SUBSCRIPTIONS_PREFIX = "subscriptions:"               # SET:  To get subscriptions by fingerprint
+      CHANNEL_PREFIX       = "channel:"                     # SET:  Auxiliary structure for whole channel's subscriptions cleanup
+      SUBSCRIPTIONS_STORAGE_TIME  = "subscription-storage-time"  # ZSET: Stores name and created_time of subscriptions
+      CHANNELS_STORAGE_TIME       = "channel-storage-time"       # ZSET: Stores name and created_time of channels
 
       # @param serializer [<#dump(obj), #load(string)] Used for serializing messages before handing them to `.broadcast(msg)`
       def initialize(serializer: Serialize, **rest)
@@ -131,7 +132,6 @@ module GraphQL
         # Store subscription_id in the channel state to cleanup on disconnect
         write_subscription_id(channel, channel_uniq_id)
 
-
         events.each do |event|
           channel.stream_from(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint)
         end
@@ -145,15 +145,26 @@ module GraphQL
         }
 
         redis.multi do |pipeline|
-          pipeline.sadd(redis_key(CHANNEL_PREFIX) + channel_uniq_id, [subscription_id])
-          pipeline.mapped_hmset(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, data)
+          full_subscription_id = "#{redis_key(SUBSCRIPTION_PREFIX)}#{subscription_id}"
+          full_channel_id = "#{redis_key(CHANNEL_PREFIX)}#{channel_uniq_id}"
+
+          pipeline.sadd(full_channel_id, [subscription_id])
+          pipeline.mapped_hmset(full_subscription_id, data)
+
           events.each do |event|
             pipeline.zincrby(redis_key(FINGERPRINTS_PREFIX) + event.topic, 1, event.fingerprint)
             pipeline.sadd(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint, [subscription_id])
           end
+
+          current_timestamp = Time.now.to_i
+
+          pipeline.zadd(redis_key(SUBSCRIPTIONS_STORAGE_TIME), current_timestamp, full_subscription_id)
+          pipeline.zadd(redis_key(CHANNELS_STORAGE_TIME), current_timestamp, full_channel_id)
+
           next unless config.subscription_expiration_seconds
-          pipeline.expire(redis_key(CHANNEL_PREFIX) + channel_uniq_id, config.subscription_expiration_seconds)
-          pipeline.expire(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, config.subscription_expiration_seconds)
+
+          pipeline.expire(full_channel_id, config.subscription_expiration_seconds)
+          pipeline.expire(full_subscription_id, config.subscription_expiration_seconds)
         end
       end
 
@@ -182,7 +193,10 @@ module GraphQL
             fingerprint_subscriptions[redis_key(FINGERPRINTS_PREFIX) + topic] = score
           end
           # Delete subscription itself
-          pipeline.del(redis_key(SUBSCRIPTION_PREFIX) + subscription_id)
+          full_subscription_id = "#{redis_key(SUBSCRIPTION_PREFIX)}#{subscription_id}"
+
+          pipeline.del(full_subscription_id)
+          pipeline.zrem(redis_key(SUBSCRIPTIONS_STORAGE_TIME), full_subscription_id)
         end
         # Clean up fingerprints that doesn't have any subscriptions left
         redis.pipelined do |pipeline|
@@ -200,10 +214,14 @@ module GraphQL
         # Missing in case disconnect happens before #execute
         return unless channel_id
 
-        redis.smembers(redis_key(CHANNEL_PREFIX) + channel_id).each do |subscription_id|
+        full_channel_id = "#{redis_key(CHANNEL_PREFIX)}#{channel_id}"
+
+        redis.smembers(full_channel_id).each do |subscription_id|
           delete_subscription(subscription_id)
         end
-        redis.del(redis_key(CHANNEL_PREFIX) + channel_id)
+
+        redis.del(full_channel_id)
+        redis.zrem(redis_key(CHANNELS_STORAGE_TIME), full_channel_id)
       end
 
       private

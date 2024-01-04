@@ -135,13 +135,20 @@ RSpec.describe GraphQL::AnyCable do
       end
 
       it "removes subscription from redis" do
-        expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be true
-        expect(redis.exists?("graphql-channel:some-truly-random-number")).to be true
+        subscription = "graphql-subscription:#{subscription_id}"
+        channel = "graphql-channel:#{subscription_id}"
+
+        expect(redis.exists?(subscription)).to be true
+        expect(redis.exists?(channel)).to be true
         expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be true
+        expect(redis.zrange("graphql-subscription-storage-time", 0, -1).member?(subscription)).to be true
+        expect(redis.zrange("graphql-channel-storage-time", 0, -1).member?(channel)).to be true
         subject
-        expect(redis.exists?("graphql-channel:some-truly-random-number")).to be false
+        expect(redis.exists?(channel)).to be false
         expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be false
-        expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
+        expect(redis.exists?(subscription)).to be false
+        expect(redis.zrange("graphql-subscription-storage-time", 0, -1).member?(subscription)).to be false
+        expect(redis.zrange("graphql-channel-storage-time", 0, -1).member?(channel)).to be false
       end
     end
 
