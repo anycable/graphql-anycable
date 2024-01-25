@@ -14,7 +14,6 @@ end
 require "anycable-rails"
 
 # Load server to trigger load hooks
-require "action_cable/server"
 require "action_cable/server/base"
 # Only for anycable-rails <1.3.0
 unless defined?(::AnyCable::Rails::Connection)

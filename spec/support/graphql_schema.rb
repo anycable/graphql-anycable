@@ -42,9 +42,35 @@ class SubscriptionType < GraphQL::Schema::Object
   end
 end
 
+class BaseObject < GraphQL::Schema::Object
+  field :class_type, String, null: false
+
+  def class_type
+    object.class.name.camelize(:lower)
+  end
+end
+
+class StrategyType < BaseObject
+  field :id, ID, null: false
+end
+
+class Strategy < Hash; end
+
+class QueryType < GraphQL::Schema::Object
+  field :strategy, StrategyType
+
+  def strategy
+    Strategy.new.tap do |h|
+      h[:id] = 2134
+      h[:class_type] = "strategy"
+    end
+  end
+end
+
 class AnycableSchema < GraphQL::Schema
   use GraphQL::AnyCable
 
+  query QueryType
   subscription SubscriptionType
 end
 
@@ -78,4 +104,5 @@ class BroadcastSchema < GraphQL::Schema
   use GraphQL::AnyCable, broadcast: true, default_broadcastable: true
 
   subscription Broadcastable::SubscriptionType
+  query QueryType
 end
