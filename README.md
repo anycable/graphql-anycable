@@ -335,6 +335,34 @@ Or you can use `collect`
   end
 ```
 
+## Async delivering messages
+
+If you use `Rails` application or you use `ActiveJob`, you can deliver messages using `ActiveJob`
+
+### Configuration
+
+You have the next configuration
+
+```ruby
+  GraphQL::AnyCable.configure do |config|
+    # ... other configurations
+    config.delivery_method = "inline" # the default value "inline", also can be "active_job"
+    config.queue = "default" # the name of ActiveJob queue
+    config.job_class = "GraphQL::Jobs::TriggerJob" # the name executor job
+  end
+```
+
+`delivery_method` can be either `inline` or `active_job`.
+`inline` means that delivering messaging will work sync.
+`active_job` - It will add delivering messages operations to `ActiveJob` with queue `default` and using job `GraphQL::Jobs::TriggerJob`
+
+You can change the queue or job_class by changing it in the configuration
+
+Or you can run code
+
+```ruby
+  GraphQL::AnyCable.delivery_method = "active_job", { queue: "broadcasting", job_class: "GraphQL::Jobs::TriggerJob" }
+```
 
 ## Testing applications which use `graphql-anycable`
 

@@ -56,14 +56,20 @@ module GraphQL
 
       def_delegators :"GraphQL::AnyCable", :redis, :config
 
+      attr_reader :collected_arguments
+      alias_method :trigger_sync, :trigger
+
       SUBSCRIPTION_PREFIX  = "subscription:"  # HASH: Stores subscription data: query, context, …
       FINGERPRINTS_PREFIX  = "fingerprints:"  # ZSET: To get fingerprints by topic
       SUBSCRIPTIONS_PREFIX = "subscriptions:" # SET:  To get subscriptions by fingerprint
       CHANNEL_PREFIX       = "channel:"       # SET:  Auxiliary structure for whole channel's subscriptions cleanup
+      EXECUTOR_METHOD_NAME = "trigger_sync"   # method, who executes the sync method "trigger"
 
       # @param serializer [<#dump(obj), #load(string)] Used for serializing messages before handing them to `.broadcast(msg)`
       def initialize(serializer: Serialize, **rest)
         @serializer = serializer
+        @collected_arguments = { serializer: serializer, **rest }
+
         super
       end
 
@@ -202,6 +208,10 @@ module GraphQL
           delete_subscription(subscription_id)
         end
         redis.del(redis_key(CHANNEL_PREFIX) + channel_id)
+      end
+
+      def trigger(...)
+        AnyCable.delivery_adapter(self).trigger(...)
       end
 
       private
