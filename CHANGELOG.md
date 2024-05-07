@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Changed
+
+- Depend on `anycable-core` gem instead of `anycable`.
+
+  This allows to avoid installing `grpc` gem when using alternate AnyCable broadcasting adapters (like HTTP).
+
+  See https://github.com/anycable/graphql-anycable/issues/43 for details.
+
 ## 1.1.6 - 2023-08-03
 
 ### Fixed
