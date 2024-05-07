@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-ENV["GRAPHQL_ANYCABLE_USE_CLIENT_PROVIDED_UNIQ_ID"] ||= "false"
-
 require "bundler/setup"
 require "graphql/anycable"
 require "pry"

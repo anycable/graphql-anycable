@@ -30,7 +30,6 @@ RSpec.describe "Broadcasting" do
 
   before do
     allow(channel).to receive(:stream_from)
-    allow(channel).to receive(:params).and_return("channelId" => "ohmycables")
     allow(anycable).to receive(:broadcast)
   end
 

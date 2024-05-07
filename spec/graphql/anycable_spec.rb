@@ -113,12 +113,6 @@ RSpec.describe GraphQL::AnyCable do
 
   describe ".delete_channel_subscriptions" do
     context "with default config.redis-prefix" do
-      around do |ex|
-        GraphQL::AnyCable.config.use_client_provided_uniq_id = false
-        ex.run
-        GraphQL::AnyCable.config.use_client_provided_uniq_id = false
-      end
-
       before do
         AnycableSchema.execute(
           query: query,
@@ -148,12 +142,10 @@ RSpec.describe GraphQL::AnyCable do
     context "with different config.redis-prefix" do
       around do |ex|
         old_redis_prefix = GraphQL::AnyCable.config.redis_prefix
-        GraphQL::AnyCable.config.use_client_provided_uniq_id = false
         GraphQL::AnyCable.config.redis_prefix = "graphql-test"
 
         ex.run
 
-        GraphQL::AnyCable.config.use_client_provided_uniq_id = false
         GraphQL::AnyCable.config.redis_prefix = old_redis_prefix
       end
 
@@ -181,41 +173,6 @@ RSpec.describe GraphQL::AnyCable do
         expect(redis.exists?("graphql-test-fingerprints::productUpdated:")).to be false
         expect(redis.exists?("graphql-test-subscription:some-truly-random-number")).to be false
       end
-    end
-  end
-
-  describe "legacy .delete_channel_subscriptions" do
-    before do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = true
-    end
-
-    before do
-      AnycableSchema.execute(
-        query: query,
-        context: { channel: channel, subscription_id: subscription_id },
-        variables: {},
-        operation_name: "SomeSubscription",
-      )
-    end
-
-    after do
-      GraphQL::AnyCable.config.use_client_provided_uniq_id = false
-    end
-
-    let(:redis) { AnycableSchema.subscriptions.redis }
-
-    subject do
-      AnycableSchema.subscriptions.delete_channel_subscriptions(channel.id)
-    end
-
-    it "removes subscription from redis" do
-      expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be true
-      expect(redis.exists?("graphql-channel:legacy_id")).to be true
-      expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be true
-      subject
-      expect(redis.exists?("graphql-channel:legacy_id")).to be false
-      expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be false
-      expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
     end
   end
 

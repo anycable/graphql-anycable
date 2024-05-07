@@ -126,11 +126,8 @@ module GraphQL
 
         raise GraphQL::AnyCable::ChannelConfigurationError unless channel
 
-        channel_uniq_id = config.use_client_provided_uniq_id? ? channel.params["channelId"] : subscription_id
-
         # Store subscription_id in the channel state to cleanup on disconnect
-        write_subscription_id(channel, channel_uniq_id)
-
+        write_subscription_id(channel, subscription_id)
 
         events.each do |event|
           channel.stream_from(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint)
@@ -145,14 +142,14 @@ module GraphQL
         }
 
         redis.multi do |pipeline|
-          pipeline.sadd(redis_key(CHANNEL_PREFIX) + channel_uniq_id, [subscription_id])
+          pipeline.sadd(redis_key(CHANNEL_PREFIX) + subscription_id, [subscription_id])
           pipeline.mapped_hmset(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, data)
           events.each do |event|
             pipeline.zincrby(redis_key(FINGERPRINTS_PREFIX) + event.topic, 1, event.fingerprint)
             pipeline.sadd(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint, [subscription_id])
           end
           next unless config.subscription_expiration_seconds
-          pipeline.expire(redis_key(CHANNEL_PREFIX) + channel_uniq_id, config.subscription_expiration_seconds)
+          pipeline.expire(redis_key(CHANNEL_PREFIX) + subscription_id, config.subscription_expiration_seconds)
           pipeline.expire(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, config.subscription_expiration_seconds)
         end
       end
@@ -193,9 +190,10 @@ module GraphQL
       end
 
       # The channel was closed, forget about it and its subscriptions
-      def delete_channel_subscriptions(channel_or_id)
-        # For backward compatibility
-        channel_id = channel_or_id.is_a?(String) ? channel_or_id : read_subscription_id(channel_or_id)
+      def delete_channel_subscriptions(channel)
+        raise(ArgumentError, "Please pass channel instance to #{__method__} in your #unsubscribed method") if channel.is_a?(String)
+
+        channel_id = read_subscription_id(channel)
 
         # Missing in case disconnect happens before #execute
         return unless channel_id
