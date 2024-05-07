@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## 1.2.0 - 2024-05-07
 
+### Added
+
+- Stats collection about subscriptions, channels, etc via `GraphQL::AnyCable.stats`. [@prog-supdex] ([#37](https://github.com/anycable/graphql-anycable/pull/37))
+
+  See [Stats](https://github.com/anycable/graphql-anycable?tab=readme-ov-file#stats) section in README for details.
+
+- Configuration option `redis_prefix` for namespacing Redis keys. [@prog-supdex] ([#36](https://github.com/anycable/graphql-anycable/pull/36))
+
 ### Changed
 
 - Depend on `anycable-core` gem instead of `anycable`.
@@ -197,6 +205,9 @@ Technical release to test publishing via GitHub Actions.
 
 Initial version: store subscriptions on redis, re-execute queries in sync. [@Envek]
 
+[@prog-supdex]: https://github.com/prog-supdex "Igor Platonov"
+[@ilyasgaraev]: https://github.com/ilyasgaraev "Ilyas Garaev"
+[@smasry]: https://github.com/smasry "Samer Masry"
 [@gsamokovarov]: https://github.com/gsamokovarov "Genadi Samokovarov"
 [@bibendi]: https://github.com/bibendi "Misha Merkushin"
 [@FX-HAO]: https://github.com/FX-HAO "Fuxin Hao"
