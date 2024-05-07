@@ -9,7 +9,7 @@ gemspec
 
 gem "graphql",  ENV.fetch("GRAPHQL_RUBY_VERSION", "~> 1.12")
 gem "anycable", ENV.fetch("ANYCABLE_VERSION", "~> 1.0")
-gem "anycable-rails", ENV.fetch("ANYCABLE_RAILS_VERSION", "~> 1.2")
+gem "anycable-rails", ENV.fetch("ANYCABLE_RAILS_VERSION", "~> 1.3")
 
 group :development, :test do
   gem "pry"
@@ -17,7 +17,4 @@ group :development, :test do
 
   gem "rubocop"
   gem "rubocop-rspec"
-
-  # See https://github.com/guilleiguaran/fakeredis/pull/247
-  gem "fakeredis", github: 'guilleiguaran/fakeredis'
 end

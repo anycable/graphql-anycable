@@ -140,6 +140,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     ```.env
     GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS=604800
     GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP=true
+    GRAPHQL_ANYCABLE_REDIS_PREFIX=graphql
     ```
 
  2. YAML configuration files (note that this is `config/graphql_anycable.yml`, *not* `config/anycable.yml`):
@@ -149,6 +150,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     production:
       subscription_expiration_seconds: 300 # 5 minutes
       use_redis_object_on_cleanup: false # For restricted redis installations
+      redis_prefix: graphql # You can configure redis_prefix for anycable-graphql subscription prefixes. Default value "graphql"
     ```
 
  3. Configuration from your application code:
@@ -156,10 +158,47 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     ```ruby
     GraphQL::AnyCable.configure do |config|
       config.subscription_expiration_seconds = 3600 # 1 hour
+      config.redis_prefix = "graphql" # on our side, we add `-` ourselves after the redis_prefix
     end
     ```
 
 And any other way provided by [anyway_config]. Check its documentation!
+
+## Emergency actions
+In situations when you don't set `subscription_expiration_seconds`, have a lot of inactive subscriptions, and `GraphQL::AnyCable::Cleaner` does`t help in that, 
+you can do the following actions for clearing subscriptions
+
+1. Set `config.subscription_expiration_seconds`. After that, the new subscriptions will have `TTL`
+2. Run the script
+```ruby
+   redis = GraphQL::AnyCable.redis
+   config = GraphQL::AnyCable.config
+   
+   # do it for subscriptions
+   redis.scan_each("graphql-subscription:*") do |key|
+     redis.expire(key, config.subscription_expiration_seconds) if redis.ttl(key) < 0
+     # or you can just remove it immediately
+     # redis.del(key) if redis.ttl(key) < 0
+   end
+
+   # do it for channels
+   redis.scan_each("graphql-channel:*") do |key|
+     redis.expire(key, config.subscription_expiration_seconds) if redis.ttl(key) < 0
+     # or you can just remove it immediately
+     # redis.del(key) if redis.ttl(key) < 0
+   end
+```
+
+Or you can change the `redis_prefix` in the `configuration` and then remove all records with the old_prefix 
+For instance:
+
+1. Change the `redis_prefix`. The default `redis_prefix` is `graphql`
+2. Run the ruby script, which remove all records with `old prefix`
+```ruby
+  redis.scan_each("graphql-*") do |key|
+    redis.del(key)
+  end
+```
 
 ## Data model
 
@@ -196,6 +235,113 @@ As in AnyCable there is no place to store subscription data in-memory, it should
     ```
     SMEMBERS graphql-channel:17420c6ed9e
     => 52ee8d65-275e-4d22-94af-313129116388
+    ```
+
+## Stats
+
+You can grab Redis subscription statistics by calling
+
+```ruby
+    GraphQL::AnyCable.stats
+```
+
+It will return a total of the amount of the key with the following prefixes
+
+```
+    graphql-subscription
+    graphql-fingerprints
+    graphql-subscriptions
+    graphql-channel
+```
+
+The response will look like this
+
+```json
+  {
+    "total": {
+      "subscription":22646,
+      "fingerprints":3200,
+      "subscriptions":20101,
+      "channel": 4900
+    }
+  }
+```
+
+You can also grab the number of subscribers grouped by subscriptions
+
+```ruby
+    GraphQL::AnyCable.stats(include_subscriptions: true)
+```
+
+It will return the response that contains `subscriptions`
+
+```json
+  {
+    "total": {
+      "subscription":22646,
+      "fingerprints":3200,
+      "subscriptions":20101,
+      "channel": 4900
+    },
+    "subscriptions": {
+      "productCreated": 11323,
+      "productUpdated": 11323
+    }
+  }
+```
+
+Also, you can set another `scan_count`, if needed.
+The default value is 1_000
+
+```ruby
+    GraphQL::AnyCable.stats(scan_count: 100)
+```
+
+We can set statistics data to [Yabeda][] for tracking amount of subscriptions
+
+```ruby
+  # config/initializers/metrics.rb
+  Yabeda.configure do
+    group :graphql_anycable_statistics do
+      gauge :subscriptions_count,  comment: "Number of graphql-anycable subscriptions"
+    end
+  end
+```
+
+```ruby
+  # in your app
+  statistics = GraphQL::AnyCable.stats[:total]
+
+  statistics.each do |key , value|
+    Yabeda.graphql_anycable_statistics.subscriptions_count.set({name: key}, value)
+  end
+```
+
+Or you can use `collect`
+```ruby
+  # config/initializers/metrics.rb
+  Yabeda.configure do
+    group :graphql_anycable_statistics do
+      gauge :subscriptions_count,  comment: "Number of graphql-anycable subscriptions"
+    end
+    
+    collect do
+      statistics = GraphQL::AnyCable.stats[:total]
+
+      statistics.each do |redis_prefix, value|
+        graphql_anycable_statistics.subscriptions_count.set({name: redis_prefix}, value)
+      end
+    end
+  end
+```
+
+
+## Testing applications which use `graphql-anycable`
+
+You can pass custom redis-server URL to AnyCable using ENV variable.
+
+    ```bash
+    REDIS_URL=redis://localhost:6379/5 bundle exec rspec
     ```
 
 ## Development
@@ -249,3 +395,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 [AnyCable]: https://github.com/anycable/anycable "Polyglot replacement for Ruby WebSocket servers with Action Cable protocol"
 [LiteCable]: https://github.com/palkan/litecable "Lightweight Action Cable implementation (Rails-free)"
 [anyway_config]: https://github.com/palkan/anyway_config "Ruby libraries and applications configuration on steroids!"
+[Yabeda]: https://github.com/yabeda-rb/yabeda "Extendable solution for easy setup of monitoring in your Ruby apps"

@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    name: "GraphQL-Ruby ${{ matrix.graphql }} on Ruby ${{ matrix.ruby }}"
+    name: "GraphQL-Ruby ${{ matrix.graphql }} on Ruby ${{ matrix.ruby }} Redis v${{ matrix.redis_version }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -19,21 +19,33 @@ jobs:
           - ruby: "3.1"
             graphql: '~> 2.0.0'
             anycable_rails: '~> 1.3'
+            redis_version: latest
           - ruby: "3.0"
             graphql: '~> 1.13.0'
             anycable_rails: '~> 1.2.0'
+            redis_version: 5.0.4
           - ruby: 2.7
             graphql: '~> 1.12.0'
             anycable_rails: '~> 1.1.0'
+            redis_version: 4.0.14
     container:
       image: ruby:${{ matrix.ruby }}
       env:
         CI: true
         GRAPHQL_RUBY_VERSION: ${{ matrix.graphql }}
         ANYCABLE_RAILS_VERSION: ${{ matrix.anycable_rails }}
+        REDIS_URL: redis://redis:6379
+    services:
+      redis:
+        image: redis:${{ matrix.redis_version }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: vendor/bundle
           key: bundle-${{ matrix.ruby }}-${{ matrix.graphql }}-${{ matrix.anycable }}-${{ hashFiles('**/*.gemspec') }}-${{ hashFiles('**/Gemfile') }}
