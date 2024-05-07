@@ -27,6 +27,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   If you're still using version 0.5 or below, please upgrade to 1.0 or 1.1 first with `handle_legacy_subscriptions` setting enabled.
   See [release notes for version 1.0.0](https://github.com/anycable/graphql-anycable/releases/tag/v1.0.0) for details.
 
+## 1.1.6 - 2023-08-03
+
+### Fixed
+
+- Fix empty operation name handling when using redis-client or redis.rb v5. [@ilyasgaraev] ([#34](https://github.com/anycable/graphql-anycable/pull/34))
+- Fix deprecation warnings for redis.rb v4.8+ and support for redis.rb v5. [@smasry] ([#29](https://github.com/anycable/graphql-anycable/pull/29))
+
+## 1.1.5 - 2022-10-26
+
+- Fix that deprecation warning about `config.use_client_provided_uniq_id` again, so it can be issued outside of Rails. [@gsamokovarov] ([#27](https://github.com/anycable/graphql-anycable/pull/27))
+
+## 1.1.4 - 2022-07-28
+
+- Fix deprecation warning about using client-side channel ids shown even if deprecated functionality was disabled in application code (not via config file or environment variable). [@gsamokovarov] ([#26](https://github.com/anycable/graphql-anycable/pull/26))
+
+  However, now deprecation warning won't be shown if graphql-anycable is used not in Ruby on Rails application.
+
 ## 1.1.3 - 2022-03-11
 
 ### Changed
