@@ -14,8 +14,11 @@ end
 require "anycable-rails"
 
 # Load server to trigger load hooks
-require "action_cable/server"
-require "action_cable/server/base"
+begin
+  require "action_cable/server/base"
+rescue LoadError
+  require "action_cable/server"
+end
 # Only for anycable-rails <1.3.0
 unless defined?(::AnyCable::Rails::Connection)
   require "anycable/rails/channel_state"
