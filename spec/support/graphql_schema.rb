@@ -46,6 +46,7 @@ class AnycableSchema < GraphQL::Schema
   use GraphQL::AnyCable
 
   subscription SubscriptionType
+  add_subscription_extension_if_necessary
 end
 
 module Broadcastable
@@ -77,4 +78,5 @@ class BroadcastSchema < GraphQL::Schema
   use GraphQL::AnyCable, broadcast: true, default_broadcastable: true
 
   subscription Broadcastable::SubscriptionType
+  add_subscription_extension_if_necessary
 end
