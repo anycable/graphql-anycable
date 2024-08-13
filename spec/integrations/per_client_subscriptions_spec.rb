@@ -25,7 +25,7 @@ RSpec.describe "non-broadcastable subscriptions" do
 
   subject { handler.handle(:command, request) }
 
-  before { allow(AnyCable.broadcast_adapter).to receive(:broadcast) }
+  before { allow(AnyCable).to receive(:broadcast) }
 
   describe "execute" do
     it "responds with result" do
@@ -62,7 +62,7 @@ RSpec.describe "non-broadcastable subscriptions" do
   end
 
   describe "unsubscribe" do
-    let(:redis) { AnycableSchema.subscriptions.redis }
+    let(:redis) { $redis }
 
     specify "removes subscription from the store" do
       # first, subscribe to obtain the connection state
@@ -102,7 +102,7 @@ RSpec.describe "non-broadcastable subscriptions" do
       expect(redis.keys("graphql-subscriptions:*").size).to eq(2)
 
       schema.subscriptions.trigger(:post_updated, {id: "a"}, POSTS.first)
-      expect(AnyCable.broadcast_adapter).to have_received(:broadcast).twice
+      expect(AnyCable).to have_received(:broadcast).twice
 
       first_state = response.istate
 
@@ -117,7 +117,7 @@ RSpec.describe "non-broadcastable subscriptions" do
       expect(redis.keys("graphql-subscriptions:*").size).to eq(1)
 
       schema.subscriptions.trigger(:post_updated, {id: "a"}, POSTS.first)
-      expect(AnyCable.broadcast_adapter).to have_received(:broadcast).thrice
+      expect(AnyCable).to have_received(:broadcast).thrice
 
       second_state = response_2.istate
 
@@ -132,7 +132,7 @@ RSpec.describe "non-broadcastable subscriptions" do
       expect(redis.keys("graphql-subscriptions:*").size).to eq(0)
 
       schema.subscriptions.trigger(:post_updated, {id: "a"}, POSTS.first)
-      expect(AnyCable.broadcast_adapter).to have_received(:broadcast).thrice
+      expect(AnyCable).to have_received(:broadcast).thrice
     end
 
     context "without subscription" do

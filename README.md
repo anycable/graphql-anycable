@@ -11,58 +11,52 @@ A (mostly) drop-in replacement for default ActionCable subscriptions adapter shi
 
 ## Why?
 
-AnyCable is fast because it does not execute any Ruby code. But default subscription implementation shipped with [graphql gem] requires to do exactly that: re-evaluate GraphQL queries in ActionCable process. AnyCable doesn't support this (it's possible but hard to implement).
+AnyCable is fast because it does not execute any Ruby code. But default subscription implementation shipped with [graphql gem] requires to do exactly that: re-evaluate GraphQL queries in Action Cable process. AnyCable doesn't support this (it's possible but hard to implement).
 
 See https://github.com/anycable/anycable-rails/issues/40 for more details and discussion.
 
 ## Differences
 
- - Subscription information is stored in Redis database configured to be used by AnyCable. Expiration or data cleanup should be configured separately (see below).
- - GraphQL queries for all subscriptions are re-executed in the process that triggers event (it may be web server, async jobs, rake tasks or whatever)
+- Subscription information is stored in a Redis database. By default, we use AnyCable Redis configuration. Expiration or data cleanup should be configured separately (see below).
+- GraphQL queries for all subscriptions are re-executed in the process that triggers event (it may be web server, async jobs, rake tasks or whatever)
 
 ## Compatibility
 
- - Should work with ActionCable in development
- - Should work without Rails via [LiteCable] 
-
-## Requirements
-
-AnyCable must be configured with redis broadcast adapter (this is default).
+- Works with Action Cable (e.g., in development/test)
+- Works without Rails (e.g., via [LiteCable][])
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'graphql-anycable', '~> 1.0'
+gem "graphql-anycable", "~> 1.0"
 ```
 
 And then execute:
 
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install graphql-anycable
+```sh
+bundle install
+```
 
 ## Usage
 
- 1. Plug it into the schema (replace from ActionCable adapter if you have one):
- 
+ 1. Plug it into the schema (replace the Action Cable adapter if you have one):
+
     ```ruby
     class MySchema < GraphQL::Schema
       use GraphQL::AnyCable, broadcast: true
-    
+
       subscription SubscriptionType
     end
     ```
- 
- 2. Execute query in ActionCable/LiteCable channel.
- 
+
+ 2. Execute a query within an Action Cable/LiteCable channel.
+
     ```ruby
     class GraphqlChannel < ApplicationCable::Channel
       def execute(data)
-        result = 
+        result =
           MySchema.execute(
             query: data["query"],
             context: context,
@@ -75,11 +69,11 @@ Or install it yourself as:
           more: result.subscription?,
         )
       end
-    
+
       def unsubscribed
         MySchema.subscriptions.delete_channel_subscriptions(self)
       end
-    
+
       private
 
       def context
@@ -90,13 +84,24 @@ Or install it yourself as:
       end
     end
     ```
- 
-    Make sure that you're passing channel instance as `channel` key to the context. 
- 
+
+    Make sure that you're passing channel instance as `channel` key to the context.
+
  3. Trigger events as usual:
- 
+
     ```ruby
     MySchema.subscriptions.trigger(:product_updated, {}, Product.first!, scope: account.id)
+    ```
+
+ 4. (Optional) When using other AnyCable broadcasting adapters than Redis, you MUST configure Redis for graphql-anycable yourself:
+
+    ```ruby
+    GraphQL::AnyCable.redis = Redis.new(url: ENV["REDIS_URL"])
+
+    # you can also use a Proc (e.g., if you want to use a connection pool)
+    redis_pool = ConnectionPool.new(size: 10) { Redis.new(url: ENV["REDIS_URL"]) }
+
+    GraphQL::AnyCable.redis = ->(&block) { redis_pool.with { |conn| block.call(conn) } }
     ```
 
 ## Broadcasting
@@ -105,14 +110,12 @@ By default, graphql-anycable evaluates queries and transmits results for every s
 
 Thankfully, GraphQL-Ruby has added [Subscriptions Broadcast](https://graphql-ruby.org/subscriptions/broadcast.html) feature that allows to group exact same subscriptions, execute them and transmit results only once.
 
-To enable this feature, turn on [Interpreter](https://graphql-ruby.org/queries/interpreter.html) and pass `broadcast` option set to `true` to graphql-anycable.
+To enable this feature, pass the `broadcast` option set to `true` to graphql-anycable.
 
 By default all fields are marked as _not safe for broadcasting_. If a subscription has at least one non-broadcastable field in its query, GraphQL-Ruby will execute every subscription for every client independently. If you sure that all your fields are safe to be broadcasted, you can pass `default_broadcastable` option set to `true` (but be aware that it can have security impllications!)
 
 ```ruby
 class MySchema < GraphQL::Schema
-  use GraphQL::Execution::Interpreter # Required for graphql-ruby before 1.12. Remove it when upgrading to 2.0
-  use GraphQL::Analysis::AST # Required for graphql-ruby before 1.12. Remove it when upgrading to 2.0
   use GraphQL::AnyCable, broadcast: true, default_broadcastable: true
 
   subscription SubscriptionType
@@ -125,7 +128,7 @@ See GraphQL-Ruby [broadcasting docs](https://graphql-ruby.org/subscriptions/broa
 
 To avoid filling Redis storage with stale subscription data:
 
- 1. Set `subscription_expiration_seconds` setting to number of seconds (e.g. `604800` for 1 week). See [configuration](#Configuration) section below for details.
+ 1. Set `subscription_expiration_seconds` setting to number of seconds (e.g. `604800` for 1 week). See [configuration](#configuration) section below for details.
 
  2. Execute `rake graphql:anycable:clean` once in a while to clean up stale subscription data.
 
@@ -165,39 +168,46 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
 And any other way provided by [anyway_config]. Check its documentation!
 
 ## Emergency actions
-In situations when you don't set `subscription_expiration_seconds`, have a lot of inactive subscriptions, and `GraphQL::AnyCable::Cleaner` does`t help in that, 
+
+In situations when you don't set `subscription_expiration_seconds`, have a lot of inactive subscriptions, and `GraphQL::AnyCable::Cleaner` does`t help in that,
 you can do the following actions for clearing subscriptions
 
 1. Set `config.subscription_expiration_seconds`. After that, the new subscriptions will have `TTL`
-2. Run the script
-```ruby
-   redis = GraphQL::AnyCable.redis
-   config = GraphQL::AnyCable.config
-   
-   # do it for subscriptions
-   redis.scan_each("graphql-subscription:*") do |key|
-     redis.expire(key, config.subscription_expiration_seconds) if redis.ttl(key) < 0
-     # or you can just remove it immediately
-     # redis.del(key) if redis.ttl(key) < 0
-   end
 
-   # do it for channels
-   redis.scan_each("graphql-channel:*") do |key|
-     redis.expire(key, config.subscription_expiration_seconds) if redis.ttl(key) < 0
-     # or you can just remove it immediately
-     # redis.del(key) if redis.ttl(key) < 0
-   end
+2. Run the script
+
+```ruby
+config = GraphQL::AnyCable.config
+
+GraphQL::AnyCable.with_redis do |redis|
+  # do it for subscriptions
+  redis.scan_each("graphql-subscription:*") do |key|
+    redis.expire(key, config.subscription_expiration_seconds) if redis.ttl(key) < 0
+    # or you can just remove it immediately
+    # redis.del(key) if redis.ttl(key) < 0
+  end
+
+  # do it for channels
+  redis.scan_each("graphql-channel:*") do |key|
+    redis.expire(key, config.subscription_expiration_seconds) if redis.ttl(key) < 0
+    # or you can just remove it immediately
+    # redis.del(key) if redis.ttl(key) < 0
+  end
+end
 ```
 
-Or you can change the `redis_prefix` in the `configuration` and then remove all records with the old_prefix 
-For instance:
+Or you can change the `redis_prefix` in the `configuration` and then remove all records with the old_prefix. For instance:
 
-1. Change the `redis_prefix`. The default `redis_prefix` is `graphql`
-2. Run the ruby script, which remove all records with `old prefix`
+1. Change the `redis_prefix`. The default `redis_prefix` is `graphql`.
+
+2. Run the ruby script, which remove all records with `old prefix`:
+
 ```ruby
+GraphQL::AnyCable.with_redis do |redis|
   redis.scan_each("graphql-*") do |key|
     redis.del(key)
   end
+end
 ```
 
 ## Data model
@@ -206,21 +216,21 @@ As in AnyCable there is no place to store subscription data in-memory, it should
 
  1. Grouped event subscriptions: `graphql-fingerprints:#{event.topic}` sorted set. Used to find all subscriptions on `GraphQLSchema.subscriptions.trigger`.
 
-    ```
+    ```sh
     ZREVRANGE graphql-fingerprints:1:myStats: 0 -1
     => 1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o=
     ```
 
  2. Event subscriptions: `graphql-subscriptions:#{event.fingerptint}` set containing identifiers for all subscriptions for given operation with certain context and arguments (serialized in _topic_). Fingerprints are already scoped by topic.
 
-    ```
+    ```sh
     SMEMBERS graphql-subscriptions:1:myStats:/MyStats/fBDZmJU1UGTorQWvOyUeaHVwUxJ3T9SEqnetj6SKGXc=/0/RBNvo1WzZ4oRRq0W9-hknpT7T8If536DEMBg9hyq_4o=
     => 52ee8d65-275e-4d22-94af-313129116388
     ```
 
  3. Subscription data: `graphql-subscription:#{subscription_id}` hash contains everything required to evaluate subscription on trigger and create data for client.
 
-    ```
+    ```sh
     HGETALL graphql-subscription:52ee8d65-275e-4d22-94af-313129116388
     => {
       context:        '{"user_id":1,"user":{"__gid__":"Z2lkOi8vZWJheS1tYWcyL1VzZXIvMQ"}}',
@@ -232,29 +242,29 @@ As in AnyCable there is no place to store subscription data in-memory, it should
 
  4. Channel subscriptions: `graphql-channel:#{subscription_id}` set containing identifiers for subscriptions created in ActionCable channel to delete them on client disconnect.
 
-    ```
+    ```sh
     SMEMBERS graphql-channel:17420c6ed9e
     => 52ee8d65-275e-4d22-94af-313129116388
     ```
 
 ## Stats
 
-You can grab Redis subscription statistics by calling
+You can grab Redis subscription statistics by calling:
 
 ```ruby
-    GraphQL::AnyCable.stats
+GraphQL::AnyCable.stats
 ```
 
-It will return a total of the amount of the key with the following prefixes
+It will return a total of the amount of the key with the following prefixes:
 
-```
-    graphql-subscription
-    graphql-fingerprints
-    graphql-subscriptions
-    graphql-channel
+```txt
+graphql-subscription
+graphql-fingerprints
+graphql-subscriptions
+graphql-channel
 ```
 
-The response will look like this
+The response will look like this:
 
 ```json
   {
@@ -267,13 +277,13 @@ The response will look like this
   }
 ```
 
-You can also grab the number of subscribers grouped by subscriptions
+You can also grab the number of subscribers grouped by subscriptions:
 
 ```ruby
-    GraphQL::AnyCable.stats(include_subscriptions: true)
+GraphQL::AnyCable.stats(include_subscriptions: true)
 ```
 
-It will return the response that contains `subscriptions`
+It will return the response that contains `subscriptions`:
 
 ```json
   {
@@ -290,59 +300,58 @@ It will return the response that contains `subscriptions`
   }
 ```
 
-Also, you can set another `scan_count`, if needed.
-The default value is 1_000
+Also, you can set another `scan_count`, if needed. The default value is 1_000:
 
 ```ruby
-    GraphQL::AnyCable.stats(scan_count: 100)
+GraphQL::AnyCable.stats(scan_count: 100)
 ```
 
-We can set statistics data to [Yabeda][] for tracking amount of subscriptions
+We can set statistics data to [Yabeda][] for tracking amount of subscriptions:
 
 ```ruby
-  # config/initializers/metrics.rb
-  Yabeda.configure do
-    group :graphql_anycable_statistics do
-      gauge :subscriptions_count,  comment: "Number of graphql-anycable subscriptions"
+# config/initializers/metrics.rb
+Yabeda.configure do
+  group :graphql_anycable_statistics do
+    gauge :subscriptions_count,  comment: "Number of graphql-anycable subscriptions"
+  end
+end
+```
+
+```ruby
+# in your app
+statistics = GraphQL::AnyCable.stats[:total]
+
+statistics.each do |key , value|
+  Yabeda.graphql_anycable_statistics.subscriptions_count.set({name: key}, value)
+end
+```
+
+Or you can use `collect`:
+
+```ruby
+# config/initializers/metrics.rb
+Yabeda.configure do
+  group :graphql_anycable_statistics do
+    gauge :subscriptions_count,  comment: "Number of graphql-anycable subscriptions"
+  end
+
+  collect do
+    statistics = GraphQL::AnyCable.stats[:total]
+
+    statistics.each do |redis_prefix, value|
+      graphql_anycable_statistics.subscriptions_count.set({name: redis_prefix}, value)
     end
   end
+end
 ```
-
-```ruby
-  # in your app
-  statistics = GraphQL::AnyCable.stats[:total]
-
-  statistics.each do |key , value|
-    Yabeda.graphql_anycable_statistics.subscriptions_count.set({name: key}, value)
-  end
-```
-
-Or you can use `collect`
-```ruby
-  # config/initializers/metrics.rb
-  Yabeda.configure do
-    group :graphql_anycable_statistics do
-      gauge :subscriptions_count,  comment: "Number of graphql-anycable subscriptions"
-    end
-    
-    collect do
-      statistics = GraphQL::AnyCable.stats[:total]
-
-      statistics.each do |redis_prefix, value|
-        graphql_anycable_statistics.subscriptions_count.set({name: redis_prefix}, value)
-      end
-    end
-  end
-```
-
 
 ## Testing applications which use `graphql-anycable`
 
 You can pass custom redis-server URL to AnyCable using ENV variable.
 
-    ```bash
-    REDIS_URL=redis://localhost:6379/5 bundle exec rspec
-    ```
+```bash
+REDIS_URL=redis://localhost:6379/5 bundle exec rspec
+```
 
 ## Development
 
@@ -381,7 +390,6 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
    ```
 
 7. GitHub Actions will create a new release, build and push gem into [rubygems.org](https://rubygems.org)! You're done!
-
 
 ## Contributing
 

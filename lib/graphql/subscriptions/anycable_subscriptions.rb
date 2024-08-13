@@ -54,7 +54,8 @@ module GraphQL
     class AnyCableSubscriptions < GraphQL::Subscriptions
       extend Forwardable
 
-      def_delegators :"GraphQL::AnyCable", :redis, :config
+      def_delegators :"GraphQL::AnyCable", :with_redis, :config
+      def_delegators :"::AnyCable", :broadcast
 
       SUBSCRIPTION_PREFIX = "subscription:"  # HASH: Stores subscription data: query, context, …
       FINGERPRINTS_PREFIX = "fingerprints:"  # ZSET: To get fingerprints by topic
@@ -70,16 +71,18 @@ module GraphQL
       # An event was triggered.
       # Re-evaluate all subscribed queries and push the data over ActionCable.
       def execute_all(event, object)
-        fingerprints = redis.zrange(redis_key(FINGERPRINTS_PREFIX) + event.topic, 0, -1)
+        fingerprints = with_redis { |redis| redis.zrange(redis_key(FINGERPRINTS_PREFIX) + event.topic, 0, -1) }
         return if fingerprints.empty?
 
-        fingerprint_subscription_ids = fingerprints.zip(
-          redis.pipelined do |pipeline|
-            fingerprints.map do |fingerprint|
-              pipeline.smembers(redis_key(SUBSCRIPTIONS_PREFIX) + fingerprint)
+        fingerprint_subscription_ids = with_redis do |redis|
+          fingerprints.zip(
+            redis.pipelined do |pipeline|
+              fingerprints.map do |fingerprint|
+                pipeline.smembers(redis_key(SUBSCRIPTIONS_PREFIX) + fingerprint)
+              end
             end
-          end
-        ).to_h
+          ).to_h
+        end
 
         fingerprint_subscription_ids.each do |fingerprint, subscription_ids|
           execute_grouped(fingerprint, subscription_ids, event, object)
@@ -94,7 +97,7 @@ module GraphQL
       def execute_grouped(fingerprint, subscription_ids, event, object)
         return if subscription_ids.empty?
 
-        subscription_id = subscription_ids.find { |sid| redis.exists?(redis_key(SUBSCRIPTION_PREFIX) + sid) }
+        subscription_id = with_redis { |redis| subscription_ids.find { |sid| redis.exists?(redis_key(SUBSCRIPTION_PREFIX) + sid) } }
         return unless subscription_id # All subscriptions has expired but haven't cleaned up yet
 
         result = execute_update(subscription_id, event, object)
@@ -115,7 +118,7 @@ module GraphQL
       # @param result [#to_h] result to send to clients
       def deliver(stream_key, result)
         payload = {result: result.to_h, more: true}.to_json
-        anycable.broadcast(stream_key, payload)
+        broadcast(stream_key, payload)
       end
 
       # Save query to "storage" (in redis)
@@ -141,34 +144,55 @@ module GraphQL
           events: events.map { |e| [e.topic, e.fingerprint] }.to_h.to_json
         }
 
-        redis.multi do |pipeline|
-          pipeline.sadd(redis_key(CHANNEL_PREFIX) + subscription_id, [subscription_id])
-          pipeline.mapped_hmset(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, data)
-          events.each do |event|
-            pipeline.zincrby(redis_key(FINGERPRINTS_PREFIX) + event.topic, 1, event.fingerprint)
-            pipeline.sadd(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint, [subscription_id])
+        with_redis do |redis|
+          redis.multi do |pipeline|
+            pipeline.sadd(redis_key(CHANNEL_PREFIX) + subscription_id, [subscription_id])
+            pipeline.mapped_hmset(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, data)
+            events.each do |event|
+              pipeline.zincrby(redis_key(FINGERPRINTS_PREFIX) + event.topic, 1, event.fingerprint)
+              pipeline.sadd(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint, [subscription_id])
+            end
+            next unless config.subscription_expiration_seconds
+            pipeline.expire(redis_key(CHANNEL_PREFIX) + subscription_id, config.subscription_expiration_seconds)
+            pipeline.expire(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, config.subscription_expiration_seconds)
           end
-          next unless config.subscription_expiration_seconds
-          pipeline.expire(redis_key(CHANNEL_PREFIX) + subscription_id, config.subscription_expiration_seconds)
-          pipeline.expire(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, config.subscription_expiration_seconds)
         end
       end
 
       # Return the query from "storage" (in redis)
       def read_subscription(subscription_id)
-        redis.mapped_hmget(
-          "#{redis_key(SUBSCRIPTION_PREFIX)}#{subscription_id}",
-          :query_string, :variables, :context, :operation_name
-        ).tap do |subscription|
-          next if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
+        with_redis do |redis|
+          redis.mapped_hmget(
+            "#{redis_key(SUBSCRIPTION_PREFIX)}#{subscription_id}",
+            :query_string, :variables, :context, :operation_name
+          ).tap do |subscription|
+            next if subscription.values.all?(&:nil?) # Redis returns hash with all nils for missing key
 
-          subscription[:context] = @serializer.load(subscription[:context])
-          subscription[:variables] = JSON.parse(subscription[:variables])
-          subscription[:operation_name] = nil if subscription[:operation_name].strip == ""
+            subscription[:context] = @serializer.load(subscription[:context])
+            subscription[:variables] = JSON.parse(subscription[:variables])
+            subscription[:operation_name] = nil if subscription[:operation_name].strip == ""
+          end
         end
       end
 
-      def delete_subscription(subscription_id)
+      # The channel was closed, forget about it and its subscriptions
+      def delete_channel_subscriptions(channel)
+        raise(ArgumentError, "Please pass channel instance to #{__method__} in your #unsubscribed method") if channel.is_a?(String)
+
+        channel_id = read_subscription_id(channel)
+
+        # Missing in case disconnect happens before #execute
+        return unless channel_id
+
+        with_redis do |redis|
+          redis.smembers(redis_key(CHANNEL_PREFIX) + channel_id).each do |subscription_id|
+            delete_subscription(subscription_id, redis: redis)
+          end
+          redis.del(redis_key(CHANNEL_PREFIX) + channel_id)
+        end
+      end
+
+      def delete_subscription(subscription_id, redis: AnyCable.redis)
         events = redis.hget(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, :events)
         events = events ? JSON.parse(events) : {}
         fingerprint_subscriptions = {}
@@ -189,26 +213,7 @@ module GraphQL
         end
       end
 
-      # The channel was closed, forget about it and its subscriptions
-      def delete_channel_subscriptions(channel)
-        raise(ArgumentError, "Please pass channel instance to #{__method__} in your #unsubscribed method") if channel.is_a?(String)
-
-        channel_id = read_subscription_id(channel)
-
-        # Missing in case disconnect happens before #execute
-        return unless channel_id
-
-        redis.smembers(redis_key(CHANNEL_PREFIX) + channel_id).each do |subscription_id|
-          delete_subscription(subscription_id)
-        end
-        redis.del(redis_key(CHANNEL_PREFIX) + channel_id)
-      end
-
       private
-
-      def anycable
-        @anycable ||= ::AnyCable.broadcast_adapter
-      end
 
       def read_subscription_id(channel)
         return channel.instance_variable_get(:@__sid__) if channel.instance_variable_defined?(:@__sid__)

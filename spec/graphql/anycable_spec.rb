@@ -30,8 +30,6 @@ RSpec.describe GraphQL::AnyCable do
     double("Channel", id: "legacy_id", params: {"channelId" => "legacy_id"}, stream_from: nil, connection: connection)
   end
 
-  let(:anycable) { AnyCable.broadcast_adapter }
-
   let(:subscription_id) do
     "some-truly-random-number"
   end
@@ -41,7 +39,7 @@ RSpec.describe GraphQL::AnyCable do
   end
 
   before do
-    allow(anycable).to receive(:broadcast)
+    allow(AnyCable).to receive(:broadcast)
     allow_any_instance_of(GraphQL::Subscriptions::Event).to receive(:fingerprint).and_return(fingerprint)
     allow_any_instance_of(GraphQL::Subscriptions).to receive(:build_id).and_return("ohmycables")
   end
@@ -54,7 +52,7 @@ RSpec.describe GraphQL::AnyCable do
   it "broadcasts message when event is being triggered" do
     subject
     AnycableSchema.subscriptions.trigger(:product_updated, {}, {id: 1, title: "foo"})
-    expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
+    expect(AnyCable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
   end
 
   context "with multiple subscriptions in one query" do
@@ -71,7 +69,7 @@ RSpec.describe GraphQL::AnyCable do
       it "broadcasts message only for update event" do
         subject
         AnycableSchema.subscriptions.trigger(:product_updated, {}, {id: 1, title: "foo"})
-        expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
+        expect(AnyCable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
       end
     end
 
@@ -86,7 +84,7 @@ RSpec.describe GraphQL::AnyCable do
         subject
         AnycableSchema.subscriptions.trigger(:product_created, {}, {id: 1, title: "Gravizapa"})
 
-        expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
+        expect(AnyCable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
       end
     end
   end
@@ -124,7 +122,7 @@ RSpec.describe GraphQL::AnyCable do
         )
       end
 
-      let(:redis) { AnycableSchema.subscriptions.redis }
+      let(:redis) { $redis }
 
       subject do
         AnycableSchema.subscriptions.delete_channel_subscriptions(channel)
@@ -160,7 +158,7 @@ RSpec.describe GraphQL::AnyCable do
         )
       end
 
-      let(:redis) { AnycableSchema.subscriptions.redis }
+      let(:redis) { $redis }
 
       subject do
         AnycableSchema.subscriptions.delete_channel_subscriptions(channel)

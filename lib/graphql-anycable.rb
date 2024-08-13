@@ -11,33 +11,55 @@ require_relative "graphql/subscriptions/anycable_subscriptions"
 
 module GraphQL
   module AnyCable
-    def self.use(schema, **opts)
-      schema.use(GraphQL::Subscriptions::AnyCableSubscriptions, **opts)
-    end
+    class << self
+      def use(schema, **opts)
+        schema.use(GraphQL::Subscriptions::AnyCableSubscriptions, **opts)
+      end
 
-    def self.stats(**opts)
-      Stats.new(**opts).collect
-    end
+      def stats(**opts)
+        Stats.new(**opts).collect
+      end
 
-    module_function
+      def redis
+        warn "Usage of `GraphQL::AnyCable.redis` is deprecated. Instead of `GraphQL::AnyCable.redis.whatever` use `GraphQL::AnyCable.with_redis { |redis| redis.whatever }`"
+        @redis ||= with_redis { |conn| conn }
+      end
 
-    def redis
-      @redis ||= begin
+      def redis=(connector)
+        @redis_connector = if connector.is_a?(::Proc)
+          connector
+        else
+          ->(&block) { block.call connector }
+        end
+      end
+
+      def with_redis(&block)
+        @redis_connector || default_redis_connector
+        @redis_connector.call(&block)
+      end
+
+      def config
+        @config ||= Config.new
+      end
+
+      def configure
+        yield(config) if block_given?
+      end
+
+      private
+
+      def default_redis_connector
         adapter = ::AnyCable.broadcast_adapter
         unless adapter.is_a?(::AnyCable::BroadcastAdapters::Redis)
           raise "Unsupported AnyCable adapter: #{adapter.class}. " \
-                  "graphql-anycable works only with redis broadcast adapter."
+                "Please, configure Redis connector manually:\n\n" \
+                "  GraphQL::AnyCable.configure do |config|\n" \
+                "    config.redis = Redis.new(url: 'redis://localhost:6379/0')\n" \
+                "  end\n"
         end
-        ::AnyCable.broadcast_adapter.redis_conn
+
+        self.redis = ::AnyCable.broadcast_adapter.redis_conn
       end
-    end
-
-    def config
-      @config ||= GraphQL::AnyCable::Config.new
-    end
-
-    def configure
-      yield(config) if block_given?
     end
   end
 end
