@@ -11,9 +11,10 @@ gem "graphql", ENV.fetch("GRAPHQL_RUBY_VERSION", "~> 2.3")
 gem "anycable", ENV.fetch("ANYCABLE_VERSION", "~> 1.5")
 gem "anycable-rails", ENV.fetch("ANYCABLE_RAILS_VERSION", "~> 1.5")
 
+gem "ostruct"
+
 group :development, :test do
-  gem "pry"
-  gem "pry-byebug", platform: :mri
+  gem "debug", platforms: [:mri] unless ENV["CI"]
 end
 
 group :development do

@@ -7,7 +7,9 @@ RSpec.describe GraphQL::AnyCable do
       context: {channel: channel, subscription_id: subscription_id},
       variables: {},
       operation_name: "SomeSubscription"
-    )
+    ).tap do |result|
+      expect(result.to_h.fetch("errors", [])).to be_empty
+    end
   end
 
   let(:query) do

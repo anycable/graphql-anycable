@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 require "bundler/setup"
+require "ostruct"
 require "graphql/anycable"
-require "pry"
+require "debug" unless ENV["CI"]
 
 require_relative "support/graphql_schema"
 require_relative "redis_helper"
