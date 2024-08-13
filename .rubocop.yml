@@ -24,3 +24,7 @@ AllCops:
 
 Style/ArgumentsForwarding:
   Enabled: false
+
+Style/GlobalVars:
+  Exclude:
+    - "spec/**/*.rb"

@@ -25,7 +25,7 @@ RSpec.describe "broadcastable subscriptions" do
 
   subject { handler.handle(:command, request) }
 
-  before { allow(AnyCable.broadcast_adapter).to receive(:broadcast) }
+  before { allow(AnyCable).to receive(:broadcast) }
 
   describe "execute" do
     it "responds with result" do
@@ -59,8 +59,27 @@ RSpec.describe "broadcastable subscriptions" do
     end
   end
 
-  describe "unsubscribe" do
-    let(:redis) { AnycableSchema.subscriptions.redis }
+  describe "unsubscribe + custom Redis connector" do
+    let(:custom_redis_url) { REDIS_TEST_DB_URL.sub(/(\/\d+\/?)?$/, "/5") }
+
+    let(:redis_connections) do
+      Array.new(2) { Redis.new(url: custom_redis_url) }
+    end
+
+    let(:redis_enumerator) do
+      redis_connections.cycle
+    end
+
+    before do
+      GraphQL::AnyCable.redis = ->(&block) { block.call redis_enumerator.next }
+    end
+
+    after do
+      GraphQL::AnyCable.remove_instance_variable(:@redis_connector)
+      redis.flushdb
+    end
+
+    let(:redis) { Redis.new(url: custom_redis_url) }
 
     specify "removes subscription from the store" do
       # first, subscribe to obtain the connection state
@@ -121,7 +140,7 @@ RSpec.describe "broadcastable subscriptions" do
       expect(redis.keys("graphql-subscriptions:*").size).to eq(1)
 
       schema.subscriptions.trigger(:post_updated, {id: "a"}, POSTS.first)
-      expect(AnyCable.broadcast_adapter).to have_received(:broadcast).once
+      expect(AnyCable).to have_received(:broadcast).once
 
       first_state = response.istate
 
@@ -136,7 +155,7 @@ RSpec.describe "broadcastable subscriptions" do
       expect(redis.keys("graphql-subscriptions:*").size).to eq(1)
 
       schema.subscriptions.trigger(:post_updated, {id: "a"}, POSTS.first)
-      expect(AnyCable.broadcast_adapter).to have_received(:broadcast).twice
+      expect(AnyCable).to have_received(:broadcast).twice
 
       second_state = response_2.istate
 
@@ -151,7 +170,7 @@ RSpec.describe "broadcastable subscriptions" do
       expect(redis.keys("graphql-subscriptions:*").size).to eq(0)
 
       schema.subscriptions.trigger(:post_updated, {id: "a"}, POSTS.first)
-      expect(AnyCable.broadcast_adapter).to have_received(:broadcast).twice
+      expect(AnyCable).to have_received(:broadcast).twice
     end
 
     context "without subscription" do

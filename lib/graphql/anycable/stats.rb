@@ -18,12 +18,14 @@ module GraphQL
       def collect
         total_subscriptions_result = {total: {}}
 
-        list_prefixes_keys.each do |name, prefix|
-          total_subscriptions_result[:total][name] = count_by_scan(match: "#{prefix}*")
-        end
+        AnyCable.with_redis do |redis|
+          list_prefixes_keys.each do |name, prefix|
+            total_subscriptions_result[:total][name] = count_by_scan(redis, match: "#{prefix}*")
+          end
 
-        if include_subscriptions
-          total_subscriptions_result[:subscriptions] = group_subscription_stats
+          if include_subscriptions
+            total_subscriptions_result[:subscriptions] = group_subscription_stats(redis)
+          end
         end
 
         total_subscriptions_result
@@ -32,7 +34,7 @@ module GraphQL
       private
 
       # Counting all keys, that match the pattern with iterating by count
-      def count_by_scan(match:)
+      def count_by_scan(redis, match:)
         sb_amount = 0
         cursor = "0"
 
@@ -47,7 +49,7 @@ module GraphQL
       end
 
       # Calculate subscribes, grouped by subscriptions
-      def group_subscription_stats
+      def group_subscription_stats(redis)
         subscription_groups = {}
 
         redis.scan_each(match: "#{list_prefixes_keys[:fingerprints]}*", count: scan_count) do |fingerprint_key|
@@ -77,10 +79,6 @@ module GraphQL
 
       def adapter
         GraphQL::Subscriptions::AnyCableSubscriptions
-      end
-
-      def redis
-        GraphQL::AnyCable.redis
       end
 
       def config

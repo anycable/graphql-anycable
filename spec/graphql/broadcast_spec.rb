@@ -26,11 +26,9 @@ RSpec.describe "Broadcasting" do
     GRAPHQL
   end
 
-  let(:anycable) { AnyCable.broadcast_adapter }
-
   before do
     allow(channel).to receive(:stream_from)
-    allow(anycable).to receive(:broadcast)
+    allow(AnyCable).to receive(:broadcast)
   end
 
   context "when all clients asks for broadcastable fields only" do
@@ -44,7 +42,7 @@ RSpec.describe "Broadcasting" do
       2.times { subscribe(query) }
       BroadcastSchema.subscriptions.trigger(:post_created, {}, object)
       expect(object).to have_received(:title).once
-      expect(anycable).to have_received(:broadcast).once
+      expect(AnyCable).to have_received(:broadcast).once
     end
   end
 
@@ -59,7 +57,7 @@ RSpec.describe "Broadcasting" do
       2.times { subscribe(query) }
       BroadcastSchema.subscriptions.trigger(:post_created, {}, object)
       expect(object).to have_received(:title).twice
-      expect(anycable).to have_received(:broadcast).twice
+      expect(AnyCable).to have_received(:broadcast).twice
     end
   end
 
@@ -70,7 +68,7 @@ RSpec.describe "Broadcasting" do
       GRAPHQL
     end
 
-    let(:redis) { AnycableSchema.subscriptions.redis }
+    let(:redis) { $redis }
 
     it "doesn't fail" do
       3.times { subscribe(query) }
@@ -78,7 +76,7 @@ RSpec.describe "Broadcasting" do
       expect(redis.keys("graphql-subscription:*").size).to eq(2)
       expect { BroadcastSchema.subscriptions.trigger(:post_created, {}, object) }.not_to raise_error
       expect(object).to have_received(:title).once
-      expect(anycable).to have_received(:broadcast).once
+      expect(AnyCable).to have_received(:broadcast).once
     end
   end
 end
