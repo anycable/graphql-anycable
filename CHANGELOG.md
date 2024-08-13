@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.3.0 - 2024-08-13
+
 ### Changed
 
 - Redis subscriptions store configuration has been decoupled from AnyCable, so you can use any broadcasting adapter and configure Redis as you like. [@palkan] ([#44](https://github.com/anycable/graphql-anycable/pull/44))
