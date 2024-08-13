@@ -33,9 +33,9 @@ class FakeConnection
   end
 
   attr_reader :request, :socket, :identifiers, :subscriptions,
-              :schema
+    :schema
 
-  alias anycable_socket socket
+  alias_method :anycable_socket, :socket
 
   def initialize(socket, identifiers: nil, subscriptions: nil)
     @socket = socket
@@ -51,29 +51,27 @@ class FakeConnection
     parsed_id.delete("channel")
     channel = Channel.new(self, identifier, parsed_id)
 
-    res =
-      case command
-      when "message"
-        data = JSON.parse(data)
-        result = 
-          schema.execute(
-            query: data["query"],
-            context: identifiers.merge(channel: channel),
-            variables: Hash(data["variables"]),
-            operation_name: data["operationName"],
-          )
-
-        transmit(
-          result: result.subscription? ? { data: nil } : result.to_h,
-          more: result.subscription?,
+    case command
+    when "message"
+      data = JSON.parse(data)
+      result =
+        schema.execute(
+          query: data["query"],
+          context: identifiers.merge(channel: channel),
+          variables: Hash(data["variables"]),
+          operation_name: data["operationName"]
         )
-      when "unsubscribe"
-        schema.subscriptions.delete_channel_subscriptions(channel)
-        true
-      else
-        raise "Unknown command"
-      end
-    res
+
+      transmit(
+        result: result.subscription? ? {data: nil} : result.to_h,
+        more: result.subscription?
+      )
+    when "unsubscribe"
+      schema.subscriptions.delete_channel_subscriptions(channel)
+      true
+    else
+      raise "Unknown command"
+    end
   end
 
   def transmit(data)
@@ -86,7 +84,7 @@ class FakeConnection
 
   def close
     socket.close
-  end 
+  end
 end
 
 AnyCable.connection_factory = ->(socket, **options) { FakeConnection.new(socket, **options) }

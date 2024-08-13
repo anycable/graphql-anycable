@@ -14,7 +14,7 @@ RSpec.describe GraphQL::AnyCable::Stats do
     let(:channel) do
       socket = double("Socket", istate: AnyCable::Socket::State.new({}))
       connection = double("Connection", anycable_socket: socket)
-      double("Channel", id: "legacy_id", params: { "channelId" => "legacy_id" }, stream_from: nil, connection: connection)
+      double("Channel", id: "legacy_id", params: {"channelId" => "legacy_id"}, stream_from: nil, connection: connection)
     end
 
     let(:subscription_id) do
@@ -24,9 +24,9 @@ RSpec.describe GraphQL::AnyCable::Stats do
     before do
       AnycableSchema.execute(
         query: query,
-        context: { channel: channel, subscription_id: subscription_id },
+        context: {channel: channel, subscription_id: subscription_id},
         variables: {},
-        operation_name: "SomeSubscription",
+        operation_name: "SomeSubscription"
       )
     end
 
@@ -47,8 +47,8 @@ RSpec.describe GraphQL::AnyCable::Stats do
         {
           total: {subscription: 1, fingerprints: 2, subscriptions: 2, channel: 1},
           subscriptions: {
-            "productCreated"=> 1,
-            "productUpdated"=> 1
+            "productCreated" => 1,
+            "productUpdated" => 1
           }
         }
       end

@@ -86,18 +86,18 @@ RSpec.describe "broadcastable subscriptions" do
         # first, subscribe to obtain the connection state
         subscribe_response = handler.handle(:command, request)
         expect(subscribe_response).to be_success
-  
+
         expect(redis.keys("graphql-subscription:*").size).to eq(1)
-  
+
         istate = subscribe_response.istate
-  
+
         request.command = "unsubscribe"
         request.data = ""
         request.istate[channel_id] = istate.to_h.to_json
-  
+
         response = handler.handle(:command, request)
         expect(response).to be_success
-  
+
         expect(redis.keys("graphql-subscription:*").size).to eq(0)
       end
     end

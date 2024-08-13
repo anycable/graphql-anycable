@@ -4,9 +4,9 @@ RSpec.describe GraphQL::AnyCable do
   subject do
     AnycableSchema.execute(
       query: query,
-      context: { channel: channel, subscription_id: subscription_id },
+      context: {channel: channel, subscription_id: subscription_id},
       variables: {},
-      operation_name: "SomeSubscription",
+      operation_name: "SomeSubscription"
     )
   end
 
@@ -25,7 +25,7 @@ RSpec.describe GraphQL::AnyCable do
   let(:channel) do
     socket = double("Socket", istate: AnyCable::Socket::State.new({}))
     connection = double("Connection", anycable_socket: socket)
-    double("Channel", id: "legacy_id", params: { "channelId" => "legacy_id" }, stream_from: nil, connection: connection)
+    double("Channel", id: "legacy_id", params: {"channelId" => "legacy_id"}, stream_from: nil, connection: connection)
   end
 
   let(:anycable) { AnyCable.broadcast_adapter }
@@ -51,7 +51,7 @@ RSpec.describe GraphQL::AnyCable do
 
   it "broadcasts message when event is being triggered" do
     subject
-    AnycableSchema.subscriptions.trigger(:product_updated, {}, { id: 1, title: "foo" })
+    AnycableSchema.subscriptions.trigger(:product_updated, {}, {id: 1, title: "foo"})
     expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
   end
 
@@ -68,7 +68,7 @@ RSpec.describe GraphQL::AnyCable do
     context "triggering update event" do
       it "broadcasts message only for update event" do
         subject
-        AnycableSchema.subscriptions.trigger(:product_updated, {}, { id: 1, title: "foo" })
+        AnycableSchema.subscriptions.trigger(:product_updated, {}, {id: 1, title: "foo"})
         expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
       end
     end
@@ -82,7 +82,7 @@ RSpec.describe GraphQL::AnyCable do
 
       it "broadcasts message only for create event" do
         subject
-        AnycableSchema.subscriptions.trigger(:product_created, {}, { id: 1, title: "Gravizapa" })
+        AnycableSchema.subscriptions.trigger(:product_created, {}, {id: 1, title: "Gravizapa"})
 
         expect(anycable).to have_received(:broadcast).with("graphql-subscriptions:#{fingerprint}", expected_result)
       end
@@ -93,9 +93,9 @@ RSpec.describe GraphQL::AnyCable do
     subject do
       AnycableSchema.execute(
         query: query,
-        context: { channel: channel, subscription_id: subscription_id },
+        context: {channel: channel, subscription_id: subscription_id},
         variables: {},
-        operation_name: nil,
+        operation_name: nil
       )
     end
 
@@ -116,10 +116,10 @@ RSpec.describe GraphQL::AnyCable do
       before do
         AnycableSchema.execute(
           query: query,
-          context: { channel: channel, subscription_id: subscription_id },
+          context: {channel: channel, subscription_id: subscription_id},
           variables: {},
-          operation_name: "SomeSubscription",
-          )
+          operation_name: "SomeSubscription"
+        )
       end
 
       let(:redis) { AnycableSchema.subscriptions.redis }
@@ -152,10 +152,10 @@ RSpec.describe GraphQL::AnyCable do
       before do
         AnycableSchema.execute(
           query: query,
-          context: { channel: channel, subscription_id: subscription_id },
+          context: {channel: channel, subscription_id: subscription_id},
           variables: {},
-          operation_name: "SomeSubscription",
-          )
+          operation_name: "SomeSubscription"
+        )
       end
 
       let(:redis) { AnycableSchema.subscriptions.redis }
@@ -182,7 +182,7 @@ RSpec.describe GraphQL::AnyCable do
         query: query,
         context: {}, # Intentionally left blank
         variables: {},
-        operation_name: "SomeSubscription",
+        operation_name: "SomeSubscription"
       )
     end
 
@@ -195,7 +195,7 @@ RSpec.describe GraphQL::AnyCable do
     it "raises configuration error" do
       expect { subject }.to raise_error(
         GraphQL::AnyCable::ChannelConfigurationError,
-        /ActionCable channel wasn't provided in the context for GraphQL query execution!/,
+        /ActionCable channel wasn't provided in the context for GraphQL query execution!/
       )
     end
   end

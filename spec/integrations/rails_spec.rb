@@ -38,17 +38,17 @@ module ApplicationCable
     delegate :schema_class, to: :connection
 
     def execute(data)
-      result = 
+      result =
         schema_class.execute(
           query: data["query"],
           context: context,
           variables: Hash(data["variables"]),
-          operation_name: data["operationName"],
+          operation_name: data["operationName"]
         )
 
       transmit(
         {
-          result: result.subscription? ? { data: nil } : result.to_h,
+          result: result.subscription? ? {data: nil} : result.to_h,
           more: result.subscription?
         }
       )
@@ -63,7 +63,7 @@ module ApplicationCable
     def context
       {
         current_user: connection.current_user,
-        channel: self,
+        channel: self
       }
     end
   end

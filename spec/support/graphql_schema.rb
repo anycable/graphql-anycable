@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 POSTS = [
-  { id: "a", title: "GraphQL is good?", actions: %w[yes no] },
-  { id: "b", title: "Is there life after GraphQL?", actions: %w[no still-no] }
+  {id: "a", title: "GraphQL is good?", actions: %w[yes no]},
+  {id: "b", title: "Is there life after GraphQL?", actions: %w[no still-no]}
 ].freeze
 
 class Product < GraphQL::Schema::Object
@@ -52,7 +52,6 @@ module Broadcastable
   class PostCreated < GraphQL::Schema::Subscription
     payload_type Post
   end
-
 
   class PostUpdated < GraphQL::Schema::Subscription
     argument :id, ID, required: true

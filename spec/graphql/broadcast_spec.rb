@@ -4,9 +4,9 @@ RSpec.describe "Broadcasting" do
   def subscribe(query)
     BroadcastSchema.execute(
       query: query,
-      context: { channel: channel },
+      context: {channel: channel},
       variables: {},
-      operation_name: "SomeSubscription",
+      operation_name: "SomeSubscription"
     )
   end
 

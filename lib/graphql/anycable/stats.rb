@@ -34,13 +34,13 @@ module GraphQL
       # Counting all keys, that match the pattern with iterating by count
       def count_by_scan(match:)
         sb_amount = 0
-        cursor = '0'
+        cursor = "0"
 
         loop do
           cursor, result = redis.scan(cursor, match: match, count: scan_count)
           sb_amount += result.count
 
-          break if cursor == '0'
+          break if cursor == "0"
         end
 
         sb_amount
