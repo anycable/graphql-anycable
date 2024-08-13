@@ -26,6 +26,8 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
+  spec.required_ruby_version = ">= 3.0.0"
+
   spec.add_dependency "anycable-core", "~> 1.1"
   spec.add_dependency "anyway_config", ">= 1.3", "< 3"
   spec.add_dependency "graphql",       ">= 1.11", "< 3"
