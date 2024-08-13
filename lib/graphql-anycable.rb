@@ -11,12 +11,12 @@ require_relative "graphql/subscriptions/anycable_subscriptions"
 
 module GraphQL
   module AnyCable
-    def self.use(schema, **)
-      schema.use(GraphQL::Subscriptions::AnyCableSubscriptions, **)
+    def self.use(schema, **opts)
+      schema.use(GraphQL::Subscriptions::AnyCableSubscriptions, **opts)
     end
 
-    def self.stats(**)
-      Stats.new(**).collect
+    def self.stats(**opts)
+      Stats.new(**opts).collect
     end
 
     module_function

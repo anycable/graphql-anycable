@@ -24,15 +24,15 @@ jobs:
             redis_version: latest
           - ruby: "3.2"
             graphql: '~> 2.2.0'
-            anycable: '~> 1.4.0'
+            anycable: '~> 1.5.0'
             redis_version: '7.2'
           - ruby: "3.1"
-            graphql: '~> 2.0.0'
-            anycable: '~> 1.3.0'
+            graphql: '~> 2.1.0'
+            anycable: '~> 1.4.0'
             redis_version: '6.2'
           - ruby: "3.0"
             graphql: '~> 2.0.0'
-            anycable: '~> 1.3.0'
+            anycable: '~> 1.4.0'
             redis_version: '6.2'
     env:
       CI: true
