@@ -186,15 +186,13 @@ module GraphQL
 
         with_redis do |redis|
           redis.smembers(redis_key(CHANNEL_PREFIX) + channel_id).each do |subscription_id|
-            delete_subscription(redis, subscription_id)
+            delete_subscription(subscription_id, redis: redis)
           end
           redis.del(redis_key(CHANNEL_PREFIX) + channel_id)
         end
       end
 
-      private
-
-      def delete_subscription(redis, subscription_id)
+      def delete_subscription(subscription_id, redis: AnyCable.redis)
         events = redis.hget(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, :events)
         events = events ? JSON.parse(events) : {}
         fingerprint_subscriptions = {}
@@ -214,6 +212,8 @@ module GraphQL
           end
         end
       end
+
+      private
 
       def read_subscription_id(channel)
         return channel.instance_variable_get(:@__sid__) if channel.instance_variable_defined?(:@__sid__)

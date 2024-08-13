@@ -10,6 +10,6 @@ $redis = Redis.new(url: REDIS_TEST_DB_URL)
 
 RSpec.configure do |config|
   config.before do
-    GraphQL::AnyCable.with_redis { _1.flushdb }
+    GraphQL::AnyCable.with_redis(&:flushdb)
   end
 end

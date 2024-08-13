@@ -20,6 +20,11 @@ module GraphQL
         Stats.new(**opts).collect
       end
 
+      def redis
+        warn "Usage of `GraphQL::AnyCable.redis` is deprecated. Instead of `GraphQL::AnyCable.redis.whatever` use `GraphQL::AnyCable.with_redis { |redis| redis.whatever }`"
+        @redis ||= with_redis { |conn| conn }
+      end
+
       def redis=(connector)
         @redis_connector = if connector.is_a?(::Proc)
           connector
@@ -30,7 +35,7 @@ module GraphQL
 
       def with_redis(&block)
         @redis_connector || default_redis_connector
-        @redis_connector.call { |conn| block.call(conn) }
+        @redis_connector.call(&block)
       end
 
       def config

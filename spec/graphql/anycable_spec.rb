@@ -122,7 +122,7 @@ RSpec.describe GraphQL::AnyCable do
         )
       end
 
-      let(:redis) { AnycableSchema.subscriptions.with_redis { _1 } }
+      let(:redis) { $redis }
 
       subject do
         AnycableSchema.subscriptions.delete_channel_subscriptions(channel)
