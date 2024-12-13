@@ -37,7 +37,7 @@ module GraphQL
 
             redis.del(key)
           end
-        end  
+        end
       end
 
       def clean_fingerprint_subscriptions
