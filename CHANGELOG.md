@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.3.1 - 2025-03-29
+
+### Fixed
+
+- Remove `clean:events` from `clean_expired_subscriptions.rake`. [@Geesu] ([#46](https://github.com/anycable/graphql-anycable/pull/46))
+
 ## 1.3.0 - 2024-08-13
 
 ### Changed
