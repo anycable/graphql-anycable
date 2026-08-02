@@ -223,6 +223,65 @@ RSpec.describe GraphQL::AnyCable do
     end
   end
 
+  describe ".subscription_store" do
+    around do |ex|
+      original_config_store = described_class.config.subscription_store
+      original_store_defined = described_class.instance_variable_defined?(:@subscription_store)
+      original_store = described_class.instance_variable_get(:@subscription_store) if original_store_defined
+      original_registry = described_class.send(:subscription_store_registry).dup
+
+      described_class.remove_instance_variable(:@subscription_store) if original_store_defined
+      ex.run
+    ensure
+      described_class.config.subscription_store = original_config_store
+      described_class.instance_variable_set(:@subscription_store_registry, original_registry)
+      if original_store_defined
+        described_class.instance_variable_set(:@subscription_store, original_store)
+      elsif described_class.instance_variable_defined?(:@subscription_store)
+        described_class.remove_instance_variable(:@subscription_store)
+      end
+    end
+
+    it "allows direct store injection" do
+      store = Object.new
+
+      described_class.subscription_store = store
+
+      expect(described_class.subscription_store).to be(store)
+    end
+
+    it "builds a registered custom store from config" do
+      store = Object.new
+      provided_config = nil
+
+      described_class.register_subscription_store(:custom) do |config|
+        provided_config = config
+        store
+      end
+      described_class.config.subscription_store = :custom
+
+      expect(described_class.subscription_store).to be(store)
+      expect(provided_config).to be(described_class.config)
+    end
+
+    it "raises a helpful error for an unknown configured store" do
+      described_class.config.subscription_store = :unknown
+
+      expect { described_class.subscription_store }.to raise_error(
+        RuntimeError,
+        /Register it with GraphQL::AnyCable\.register_subscription_store\(:unknown\)/
+      )
+    end
+
+    it "builds the default Redis store with stats and cleaner objects" do
+      store = described_class.subscription_store
+
+      expect(store).to be_a(GraphQL::AnyCable::SubscriptionStores::Redis)
+      expect(store.cleaner).to be_a(GraphQL::AnyCable::SubscriptionStores::Redis::Cleaner)
+      expect(store.stats(scan_count: 25)).to include(total: a_hash_including(:subscription, :fingerprints, :subscriptions, :channel))
+    end
+  end
+
   describe ".stats" do
     it "calls Graphql::AnyCable::Stats" do
       allow_any_instance_of(GraphQL::AnyCable::Stats).to receive(:collect)

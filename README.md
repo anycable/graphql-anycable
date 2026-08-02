@@ -17,7 +17,8 @@ See https://github.com/anycable/anycable-rails/issues/40 for more details and di
 
 ## Differences
 
-- Subscription information is stored in a Redis database. By default, we use AnyCable Redis configuration. Expiration or data cleanup should be configured separately (see below).
+- Subscription information is stored in Redis by default, using AnyCable Redis configuration. Expiration or data cleanup should be configured separately (see below).
+- Custom subscription stores can be registered when Redis is not the right persistence backend for your application.
 - GraphQL queries for all subscriptions are re-executed in the process that triggers event (it may be web server, async jobs, rake tasks or whatever)
 
 ## Compatibility
@@ -93,7 +94,9 @@ bundle install
     MySchema.subscriptions.trigger(:product_updated, {}, Product.first!, scope: account.id)
     ```
 
- 4. (Optional) When using other AnyCable broadcasting adapters than Redis, you MUST configure Redis for graphql-anycable yourself:
+ 4. (Optional) If you keep the built-in Redis subscription store while using a
+    non-Redis AnyCable broadcasting adapter, configure Redis for graphql-anycable
+    explicitly:
 
     ```ruby
     GraphQL::AnyCable.redis = Redis.new(url: ENV["REDIS_URL"])
@@ -103,6 +106,10 @@ bundle install
 
     GraphQL::AnyCable.redis = ->(&block) { redis_pool.with { |conn| block.call(conn) } }
     ```
+
+    If you prefer another persistence backend, register a custom subscription
+    store and select it with `subscription_store`; in that case, Redis is not
+    required for graphql-anycable subscription state.
 
 ## Broadcasting
 
@@ -142,6 +149,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
 
     ```.env
     GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS=604800
+    GRAPHQL_ANYCABLE_SUBSCRIPTION_STORE=redis
     GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP=true
     GRAPHQL_ANYCABLE_REDIS_PREFIX=graphql
     ```
@@ -152,6 +160,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     # config/graphql_anycable.yml
     production:
       subscription_expiration_seconds: 300 # 5 minutes
+      subscription_store: redis
       use_redis_object_on_cleanup: false # For restricted redis installations
       redis_prefix: graphql # You can configure redis_prefix for anycable-graphql subscription prefixes. Default value "graphql"
     ```
@@ -161,11 +170,68 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     ```ruby
     GraphQL::AnyCable.configure do |config|
       config.subscription_expiration_seconds = 3600 # 1 hour
+      config.subscription_store = :redis
       config.redis_prefix = "graphql" # on our side, we add `-` ourselves after the redis_prefix
     end
     ```
 
 And any other way provided by [anyway_config]. Check its documentation!
+
+## Custom subscription stores
+
+The built-in subscription store is `:redis`. External gems and applications can register additional stores:
+
+```ruby
+GraphQL::AnyCable.register_subscription_store(:my_store) do |config|
+  MySubscriptionStore.new(config: config)
+end
+
+GraphQL::AnyCable.configure do |config|
+  config.subscription_store = :my_store
+end
+```
+
+For PostgreSQL-backed subscription storage, use [`graphql-anycable_postgresql-store`](https://github.com/TikiTDO/graphql-anycable_postgresql-store):
+
+```ruby
+gem "graphql-anycable_postgresql-store"
+
+GraphQL::AnyCable.configure do |config|
+  config.subscription_store = :postgresql
+end
+```
+
+You can also provide a store object directly:
+
+```ruby
+GraphQL::AnyCable.subscription_store = MySubscriptionStore.new
+```
+
+A subscription store must implement the following methods:
+
+- `stream_for(fingerprint)`
+- `fingerprints_for_topic(topic)`
+- `subscription_ids_for_fingerprints(fingerprints)`
+- `subscription_exists?(subscription_id)`
+- `write_subscription(subscription_id, channel_id:, data:, events:, expiration_seconds:)`
+- `read_subscription(subscription_id)`
+- `delete_channel_subscriptions(channel_id)`
+- `delete_subscription(subscription_id)`
+- `stats(scan_count:, include_subscriptions:)`
+- `cleaner`
+
+The `data` hash passed to `write_subscription` contains `:query_string`, `:variables`, `:context`, `:operation_name`, and `:events`.
+
+`stats` must return a hash with a `:total` entry containing integer counters
+for `:subscription`, `:fingerprints`, `:subscriptions`, and `:channel`.
+When `include_subscriptions` is true, it should also include a
+`:subscriptions` hash mapping subscription names/topics to active subscriber
+counts. Stores that do not scan keys may accept and ignore `scan_count`.
+
+`cleaner` must return an object that responds to `clean`,
+`clean_channels`, `clean_subscriptions`, `clean_fingerprint_subscriptions`,
+and `clean_topic_fingerprints`. Stores that do not need cleanup may return a
+no-op cleaner.
 
 ## Emergency actions
 
@@ -210,9 +276,9 @@ GraphQL::AnyCable.with_redis do |redis|
 end
 ```
 
-## Data model
+## Redis data model
 
-As in AnyCable there is no place to store subscription data in-memory, it should be persisted somewhere to be retrieved on `GraphQLSchema.subscriptions.trigger` and sent to subscribed clients. `graphql-anycable` uses the same Redis database as AnyCable itself.
+As in AnyCable there is no place to store subscription data in-memory, it should be persisted somewhere to be retrieved on `GraphQLSchema.subscriptions.trigger` and sent to subscribed clients. The built-in Redis store uses the same Redis database as AnyCable itself.
 
  1. Grouped event subscriptions: `graphql-fingerprints:#{event.topic}` sorted set. Used to find all subscriptions on `GraphQLSchema.subscriptions.trigger`.
 
@@ -249,13 +315,13 @@ As in AnyCable there is no place to store subscription data in-memory, it should
 
 ## Stats
 
-You can grab Redis subscription statistics by calling:
+You can grab subscription store statistics by calling:
 
 ```ruby
 GraphQL::AnyCable.stats
 ```
 
-It will return a total of the amount of the key with the following prefixes:
+For the built-in Redis store, it returns the total amount of keys with the following prefixes:
 
 ```txt
 graphql-subscription
@@ -300,7 +366,7 @@ It will return the response that contains `subscriptions`:
   }
 ```
 
-Also, you can set another `scan_count`, if needed. The default value is 1_000:
+Also, you can set another `scan_count`, if needed. The default value is 1_000. Stores that do not scan keys can ignore this option:
 
 ```ruby
 GraphQL::AnyCable.stats(scan_count: 100)
@@ -338,8 +404,8 @@ Yabeda.configure do
   collect do
     statistics = GraphQL::AnyCable.stats[:total]
 
-    statistics.each do |redis_prefix, value|
-      graphql_anycable_statistics.subscriptions_count.set({name: redis_prefix}, value)
+    statistics.each do |stat_name, value|
+      graphql_anycable_statistics.subscriptions_count.set({name: stat_name}, value)
     end
   end
 end

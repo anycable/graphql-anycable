@@ -6,77 +6,33 @@ module GraphQL
       extend self
 
       def clean
-        clean_channels
-        clean_subscriptions
-        clean_fingerprint_subscriptions
-        clean_topic_fingerprints
+        cleaner.clean
       end
 
       def clean_channels
-        return unless config.subscription_expiration_seconds
-        return unless config.use_redis_object_on_cleanup
-
-        AnyCable.with_redis do |redis|
-          redis.scan_each(match: "#{redis_key(adapter::CHANNEL_PREFIX)}*") do |key|
-            idle = redis.object("IDLETIME", key)
-            next if idle&.<= config.subscription_expiration_seconds
-
-            redis.del(key)
-          end
-        end
+        cleaner.clean_channels
       end
 
       def clean_subscriptions
-        return unless config.subscription_expiration_seconds
-        return unless config.use_redis_object_on_cleanup
-
-        AnyCable.with_redis do |redis|
-          redis.scan_each(match: "#{redis_key(adapter::SUBSCRIPTION_PREFIX)}*") do |key|
-            idle = redis.object("IDLETIME", key)
-            next if idle&.<= config.subscription_expiration_seconds
-
-            redis.del(key)
-          end
-        end
+        cleaner.clean_subscriptions
       end
 
       def clean_fingerprint_subscriptions
-        AnyCable.with_redis do |redis|
-          redis.scan_each(match: "#{redis_key(adapter::SUBSCRIPTIONS_PREFIX)}*") do |key|
-            redis.smembers(key).each do |subscription_id|
-              next if redis.exists?(redis_key(adapter::SUBSCRIPTION_PREFIX) + subscription_id)
-
-              redis.srem(key, subscription_id)
-            end
-          end
-        end
+        cleaner.clean_fingerprint_subscriptions
       end
 
       def clean_topic_fingerprints
-        AnyCable.with_redis do |redis|
-          redis.scan_each(match: "#{redis_key(adapter::FINGERPRINTS_PREFIX)}*") do |key|
-            redis.zremrangebyscore(key, "-inf", "0")
-            redis.zrange(key, 0, -1).each do |fingerprint|
-              next if redis.exists?(redis_key(adapter::SUBSCRIPTIONS_PREFIX) + fingerprint)
-
-              redis.zrem(key, fingerprint)
-            end
-          end
-        end
+        cleaner.clean_topic_fingerprints
       end
 
       private
 
-      def adapter
-        GraphQL::Subscriptions::AnyCableSubscriptions
-      end
+      def cleaner
+        store = GraphQL::AnyCable.subscription_store
+        return store.cleaner if store.respond_to?(:cleaner)
 
-      def config
-        GraphQL::AnyCable.config
-      end
-
-      def redis_key(prefix)
-        "#{config.redis_prefix}-#{prefix}"
+        raise "GraphQL::AnyCable subscription store #{store.class} does not support cleanup. " \
+              "Implement #cleaner returning an object that responds to the cleanup methods."
       end
     end
   end

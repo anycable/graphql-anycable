@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Added
+
+- Add a custom subscription store interface, including store-backed stats. [@TikiTDO] ([#54](https://github.com/anycable/graphql-anycable/pull/54))
+
 ## 1.3.1 - 2025-03-29
 
 ### Fixed
@@ -225,3 +229,4 @@ Initial version: store subscriptions on redis, re-execute queries in sync. [@Env
 [@FX-HAO]: https://github.com/FX-HAO "Fuxin Hao"
 [@Envek]: https://github.com/Envek "Andrey Novikov"
 [@palkan]: https://github.com/palkan "Vladimir Dementyev"
+[@TikiTDO]: https://github.com/TikiTDO "TikiTDO"
