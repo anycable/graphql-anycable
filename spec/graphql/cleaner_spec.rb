@@ -4,10 +4,15 @@ RSpec.describe GraphQL::AnyCable::Cleaner do
   let(:config) { GraphQL::AnyCable.config }
 
   around do |example|
+    old_scan_count = config.redis_scan_count
     old_expiration = config.subscription_expiration_seconds
     example.run
+    config.redis_scan_count = old_scan_count
     config.subscription_expiration_seconds = old_expiration
   end
+
+  # Enforce several SCAN/pipeline batches to make sure batching doesn't lose or skip anything.
+  before { config.redis_scan_count = 2 }
 
   describe "#clean_fingerprint_subscriptions" do
     before do
@@ -83,6 +88,36 @@ RSpec.describe GraphQL::AnyCable::Cleaner do
       described_class.clean_channels
 
       expect($redis.keys("graphql-channel:*")).to be_empty
+    end
+  end
+
+  describe "redis round trips" do
+    before do
+      config.redis_scan_count = 1000
+      $redis.sadd("graphql-subscriptions:fingerprint-1", (1..100).map { |i| "stale-#{i}" })
+    end
+
+    it "checks and removes members in batches instead of one by one" do
+      commands = count_commands { described_class.clean_fingerprint_subscriptions }
+
+      expect(commands["srem"]).to eq(1)
+      expect(commands["smembers"]).to be_nil
+    end
+
+    # Counts the commands issued to redis using a MONITOR-like counter based on `INFO commandstats`.
+    def count_commands
+      before = command_stats
+      yield
+      command_stats.to_h { |command, calls| [command, calls - before.fetch(command, 0)] }
+        .reject { |_command, calls| calls.zero? }
+    end
+
+    def command_stats
+      $redis.info("commandstats").to_h do |command, stats|
+        # Older redis-rb versions return the raw "calls=1,usec=..." string instead of a parsed hash.
+        calls = stats.is_a?(Hash) ? stats["calls"] : stats[/calls=(\d+)/, 1]
+        [command.delete_prefix("cmdstat_"), calls.to_i]
+      end
     end
   end
 end

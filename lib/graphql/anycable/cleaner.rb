@@ -29,10 +29,9 @@ module GraphQL
       def clean_fingerprint_subscriptions
         AnyCable.with_redis do |redis|
           each_key(redis, adapter::SUBSCRIPTIONS_PREFIX) do |key|
-            redis.smembers(key).each do |subscription_id|
-              next if redis.exists?(redis_key(adapter::SUBSCRIPTION_PREFIX) + subscription_id)
-
-              redis.srem(key, subscription_id)
+            each_batch(redis.sscan_each(key, count: redis_scan_count)) do |subscription_ids|
+              stale = reject_existing(redis, adapter::SUBSCRIPTION_PREFIX, subscription_ids)
+              redis.srem(key, stale) unless stale.empty?
             end
           end
         end
@@ -42,10 +41,11 @@ module GraphQL
         AnyCable.with_redis do |redis|
           each_key(redis, adapter::FINGERPRINTS_PREFIX) do |key|
             redis.zremrangebyscore(key, "-inf", "0")
-            redis.zrange(key, 0, -1).each do |fingerprint|
-              next if redis.exists?(redis_key(adapter::SUBSCRIPTIONS_PREFIX) + fingerprint)
 
-              redis.zrem(key, fingerprint)
+            each_batch(redis.zscan_each(key, count: redis_scan_count)) do |members|
+              fingerprints = members.map(&:first)
+              stale = reject_existing(redis, adapter::SUBSCRIPTIONS_PREFIX, fingerprints)
+              redis.zrem(key, stale) unless stale.empty?
             end
           end
         end
@@ -55,18 +55,39 @@ module GraphQL
 
       def clean_idle_keys(prefix)
         AnyCable.with_redis do |redis|
-          each_key(redis, prefix) do |key|
-            idle = redis.object("IDLETIME", key)
-            next if idle&.<= config.subscription_expiration_seconds
+          each_key_batch(redis, prefix) do |keys|
+            idle_times = redis.pipelined do |pipeline|
+              keys.each { |key| pipeline.object("IDLETIME", key) }
+            end
 
-            redis.del(key)
+            expired = keys.reject.with_index { |_key, index| idle_times[index]&.<= config.subscription_expiration_seconds }
+            redis.del(*expired) unless expired.empty?
           end
         end
       end
 
-      # Iterates over the keys matching the given prefix.
+      # Iterates over the keys matching the given prefix, one key at a time.
       def each_key(redis, prefix, &block)
-        redis.scan_each(match: "#{redis_key(prefix)}*", &block)
+        redis.scan_each(match: "#{redis_key(prefix)}*", count: redis_scan_count, &block)
+      end
+
+      # Iterates over the keys matching the given prefix in batches, to allow pipelining.
+      def each_key_batch(redis, prefix, &block)
+        each_batch(each_key(redis, prefix), &block)
+      end
+
+      # Consumes a lazy enumerator (SCAN family) in batches to keep memory usage bounded.
+      def each_batch(enumerator, &block)
+        enumerator.each_slice(redis_scan_count, &block)
+      end
+
+      # Returns the ids which have no corresponding key in redis anymore, checking them in a single round trip.
+      def reject_existing(redis, prefix, ids)
+        existing = redis.pipelined do |pipeline|
+          ids.each { |id| pipeline.exists?(redis_key(prefix) + id) }
+        end
+
+        ids.reject.with_index { |_id, index| existing[index] }
       end
 
       def adapter
@@ -75,6 +96,10 @@ module GraphQL
 
       def config
         GraphQL::AnyCable.config
+      end
+
+      def redis_scan_count
+        config.redis_scan_count.to_i
       end
 
       def redis_key(prefix)
