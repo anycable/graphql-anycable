@@ -16,33 +16,19 @@ module GraphQL
         return unless config.subscription_expiration_seconds
         return unless config.use_redis_object_on_cleanup
 
-        AnyCable.with_redis do |redis|
-          redis.scan_each(match: "#{redis_key(adapter::CHANNEL_PREFIX)}*") do |key|
-            idle = redis.object("IDLETIME", key)
-            next if idle&.<= config.subscription_expiration_seconds
-
-            redis.del(key)
-          end
-        end
+        clean_idle_keys(adapter::CHANNEL_PREFIX)
       end
 
       def clean_subscriptions
         return unless config.subscription_expiration_seconds
         return unless config.use_redis_object_on_cleanup
 
-        AnyCable.with_redis do |redis|
-          redis.scan_each(match: "#{redis_key(adapter::SUBSCRIPTION_PREFIX)}*") do |key|
-            idle = redis.object("IDLETIME", key)
-            next if idle&.<= config.subscription_expiration_seconds
-
-            redis.del(key)
-          end
-        end
+        clean_idle_keys(adapter::SUBSCRIPTION_PREFIX)
       end
 
       def clean_fingerprint_subscriptions
         AnyCable.with_redis do |redis|
-          redis.scan_each(match: "#{redis_key(adapter::SUBSCRIPTIONS_PREFIX)}*") do |key|
+          each_key(redis, adapter::SUBSCRIPTIONS_PREFIX) do |key|
             redis.smembers(key).each do |subscription_id|
               next if redis.exists?(redis_key(adapter::SUBSCRIPTION_PREFIX) + subscription_id)
 
@@ -54,7 +40,7 @@ module GraphQL
 
       def clean_topic_fingerprints
         AnyCable.with_redis do |redis|
-          redis.scan_each(match: "#{redis_key(adapter::FINGERPRINTS_PREFIX)}*") do |key|
+          each_key(redis, adapter::FINGERPRINTS_PREFIX) do |key|
             redis.zremrangebyscore(key, "-inf", "0")
             redis.zrange(key, 0, -1).each do |fingerprint|
               next if redis.exists?(redis_key(adapter::SUBSCRIPTIONS_PREFIX) + fingerprint)
@@ -66,6 +52,22 @@ module GraphQL
       end
 
       private
+
+      def clean_idle_keys(prefix)
+        AnyCable.with_redis do |redis|
+          each_key(redis, prefix) do |key|
+            idle = redis.object("IDLETIME", key)
+            next if idle&.<= config.subscription_expiration_seconds
+
+            redis.del(key)
+          end
+        end
+      end
+
+      # Iterates over the keys matching the given prefix.
+      def each_key(redis, prefix, &block)
+        redis.scan_each(match: "#{redis_key(prefix)}*", &block)
+      end
 
       def adapter
         GraphQL::Subscriptions::AnyCableSubscriptions
