@@ -134,6 +134,10 @@ To avoid filling Redis storage with stale subscription data:
 
     Heroku users should set up `use_redis_object_on_cleanup` setting to `false` due to [limitations in Heroku Redis](https://devcenter.heroku.com/articles/heroku-redis#connection-permissions).
 
+    The task is also available as granular sub-tasks, so you can run only some of them, or run them on different schedules: `rake graphql:anycable:clean:channels`, `rake graphql:anycable:clean:subscriptions`, `rake graphql:anycable:clean:fingerprint_subscriptions`, `rake graphql:anycable:clean:topic_fingerprints`.
+
+    Cleanup iterates over Redis with the `SCAN` family of commands and pipelines the checks it performs on each batch. Use the `redis_scan_count` setting to tune the batch size: larger values mean fewer round trips (so faster cleanup), at the cost of doing more work per Redis call.
+
 ## Configuration
 
 GraphQL-AnyCable uses [anyway_config] to configure itself. There are several possibilities to configure this gem:
@@ -144,6 +148,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
     GRAPHQL_ANYCABLE_SUBSCRIPTION_EXPIRATION_SECONDS=604800
     GRAPHQL_ANYCABLE_USE_REDIS_OBJECT_ON_CLEANUP=true
     GRAPHQL_ANYCABLE_REDIS_PREFIX=graphql
+    GRAPHQL_ANYCABLE_REDIS_SCAN_COUNT=1000
     ```
 
  2. YAML configuration files (note that this is `config/graphql_anycable.yml`, *not* `config/anycable.yml`):
@@ -154,6 +159,7 @@ GraphQL-AnyCable uses [anyway_config] to configure itself. There are several pos
       subscription_expiration_seconds: 300 # 5 minutes
       use_redis_object_on_cleanup: false # For restricted redis installations
       redis_prefix: graphql # You can configure redis_prefix for anycable-graphql subscription prefixes. Default value "graphql"
+      redis_scan_count: 1000 # Batch size used by the cleanup rake tasks. Default value 1000
     ```
 
  3. Configuration from your application code:
