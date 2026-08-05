@@ -30,7 +30,7 @@ module GraphQL
         AnyCable.with_redis do |redis|
           each_key(redis, adapter::SUBSCRIPTIONS_PREFIX) do |key|
             each_batch(redis.sscan_each(key, count: redis_scan_count)) do |subscription_ids|
-              stale = reject_existing(redis, adapter::SUBSCRIPTION_PREFIX, subscription_ids)
+              stale = missing_key_ids(redis, adapter::SUBSCRIPTION_PREFIX, subscription_ids)
               redis.srem(key, stale) unless stale.empty?
             end
           end
@@ -44,7 +44,7 @@ module GraphQL
 
             each_batch(redis.zscan_each(key, count: redis_scan_count)) do |members|
               fingerprints = members.map(&:first)
-              stale = reject_existing(redis, adapter::SUBSCRIPTIONS_PREFIX, fingerprints)
+              stale = missing_key_ids(redis, adapter::SUBSCRIPTIONS_PREFIX, fingerprints)
               redis.zrem(key, stale) unless stale.empty?
             end
           end
@@ -55,7 +55,7 @@ module GraphQL
 
       def clean_idle_keys(prefix)
         AnyCable.with_redis do |redis|
-          each_key_batch(redis, prefix) do |keys|
+          each_batch(redis.scan_each(match: "#{redis_key(prefix)}*", count: redis_scan_count)) do |keys|
             idle_times = redis.pipelined do |pipeline|
               keys.each { |key| pipeline.object("IDLETIME", key) }
             end
@@ -71,23 +71,19 @@ module GraphQL
         redis.scan_each(match: "#{redis_key(prefix)}*", count: redis_scan_count, &block)
       end
 
-      # Iterates over the keys matching the given prefix in batches, to allow pipelining.
-      def each_key_batch(redis, prefix, &block)
-        each_batch(each_key(redis, prefix), &block)
-      end
-
       # Consumes a lazy enumerator (SCAN family) in batches to keep memory usage bounded.
       def each_batch(enumerator, &block)
         enumerator.each_slice(redis_scan_count, &block)
       end
 
       # Returns the ids which have no corresponding key in redis anymore, checking them in a single round trip.
-      def reject_existing(redis, prefix, ids)
-        existing = redis.pipelined do |pipeline|
+      def missing_key_ids(redis, prefix, ids)
+        exists = redis.pipelined do |pipeline|
           ids.each { |id| pipeline.exists?(redis_key(prefix) + id) }
         end
 
-        ids.reject.with_index { |_id, index| existing[index] }
+        # Reject ids that has corresponding key in Redis in `exists` array of pipelined responses.
+        ids.reject.with_index { |_id, index| exists[index] }
       end
 
       def adapter
