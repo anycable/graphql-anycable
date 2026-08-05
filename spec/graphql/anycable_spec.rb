@@ -27,7 +27,7 @@ RSpec.describe GraphQL::AnyCable do
   let(:channel) do
     socket = double("Socket", istate: AnyCable::Socket::State.new({}))
     connection = double("Connection", anycable_socket: socket)
-    double("Channel", id: "legacy_id", params: {"channelId" => "legacy_id"}, stream_from: nil, connection: connection)
+    double("Channel", __istate__: socket.istate, id: "legacy_id", params: {"channelId" => "legacy_id"}, stream_from: nil, connection: connection)
   end
 
   let(:subscription_id) do
@@ -141,6 +141,36 @@ RSpec.describe GraphQL::AnyCable do
         expect(redis.exists?("graphql-channel:some-truly-random-number")).to be false
         expect(redis.exists?("graphql-fingerprints::productUpdated:")).to be false
         expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
+      end
+    end
+
+    context "when the channel carries several subscriptions" do
+      let(:redis) { $redis }
+
+      before do
+        %w[sid-first sid-second].each do |sid|
+          AnycableSchema.execute(
+            query: query,
+            context: {channel: channel, subscription_id: sid},
+            variables: {},
+            operation_name: "SomeSubscription"
+          )
+        end
+      end
+
+      it "removes all of them, not only the last one" do
+        expect(redis.exists?("graphql-subscription:sid-first")).to be true
+        expect(redis.exists?("graphql-subscription:sid-second")).to be true
+
+        AnycableSchema.subscriptions.delete_channel_subscriptions(channel)
+
+        aggregate_failures do
+          expect(redis.exists?("graphql-subscription:sid-first")).to be false
+          expect(redis.exists?("graphql-subscription:sid-second")).to be false
+          expect(redis.keys("graphql-channel:*")).to be_empty
+          expect(redis.keys("graphql-subscriptions:*")).to be_empty
+          expect(redis.keys("graphql-fingerprints:*")).to be_empty
+        end
       end
     end
 

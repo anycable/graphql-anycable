@@ -21,7 +21,7 @@ RSpec.describe GraphQL::AnyCable::Stats do
     let(:channel) do
       socket = double("Socket", istate: AnyCable::Socket::State.new({}))
       connection = double("Connection", anycable_socket: socket)
-      double("Channel", id: "legacy_id", params: {"channelId" => "legacy_id"}, stream_from: nil, connection: connection)
+      double("Channel", __istate__: socket.istate, id: "legacy_id", params: {"channelId" => "legacy_id"}, stream_from: nil, connection: connection)
     end
 
     let(:subscription_id) do

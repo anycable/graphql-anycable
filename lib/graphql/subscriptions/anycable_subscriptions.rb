@@ -127,8 +127,12 @@ module GraphQL
 
         raise GraphQL::AnyCable::ChannelConfigurationError unless channel
 
-        # Store subscription_id in the channel state to cleanup on disconnect
-        write_subscription_id(channel, subscription_id)
+        # Store the channel's id in its state to cleanup on disconnect. A channel may carry more
+        # than one subscription, so the first subscription's id names the channel and every later
+        # subscription is added to that same set: otherwise each new subscription would overwrite
+        # the stored id, and #delete_channel_subscriptions could only ever find the last one.
+        channel_id = read_subscription_id(channel) || subscription_id
+        write_subscription_id(channel, channel_id)
 
         events.each do |event|
           channel.stream_from(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint)
@@ -144,14 +148,14 @@ module GraphQL
 
         with_redis do |redis|
           redis.multi do |pipeline|
-            pipeline.sadd(redis_key(CHANNEL_PREFIX) + subscription_id, [subscription_id])
+            pipeline.sadd(redis_key(CHANNEL_PREFIX) + channel_id, [subscription_id])
             pipeline.mapped_hmset(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, data)
             events.each do |event|
               pipeline.zincrby(redis_key(FINGERPRINTS_PREFIX) + event.topic, 1, event.fingerprint)
               pipeline.sadd(redis_key(SUBSCRIPTIONS_PREFIX) + event.fingerprint, [subscription_id])
             end
             next unless config.subscription_expiration_seconds
-            pipeline.expire(redis_key(CHANNEL_PREFIX) + subscription_id, config.subscription_expiration_seconds)
+            pipeline.expire(redis_key(CHANNEL_PREFIX) + channel_id, config.subscription_expiration_seconds)
             pipeline.expire(redis_key(SUBSCRIPTION_PREFIX) + subscription_id, config.subscription_expiration_seconds)
           end
         end
