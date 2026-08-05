@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Fixed
+
+- Cleanup tasks now pipeline their reads and removals across keys, not just within a single key. 1.3.2 only sped things up when a few keys held a lot of members each; when there are many keys holding a handful of members each — the common case for per-client subscriptions — the round trips per key dominated and it barely helped. Collections small enough to read in bulk are now read for many keys per round trip, while collections above the batch size are still iterated with a cursor to keep memory bounded. [@jjb] ([#57](https://github.com/anycable/graphql-anycable/pull/57))
+
 ## 1.3.2 - 2026-08-05
 
 ### Fixed
