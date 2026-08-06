@@ -246,11 +246,12 @@ As in AnyCable there is no place to store subscription data in-memory, it should
     }
     ```
 
- 4. Channel subscriptions: `graphql-channel:#{subscription_id}` set containing identifiers for subscriptions created in ActionCable channel to delete them on client disconnect.
+ 4. Channel subscriptions: `graphql-channel:#{channel_id}` set containing identifiers for all subscriptions created on one ActionCable channel, used to delete them on client disconnect. The channel is named after its first subscription's id (stored in the channel's AnyCable state); every later subscription on the same channel is added to that same set.
 
     ```sh
-    SMEMBERS graphql-channel:17420c6ed9e
+    SMEMBERS graphql-channel:52ee8d65-275e-4d22-94af-313129116388
     => 52ee8d65-275e-4d22-94af-313129116388
+       a1b2c3d4-5678-90ab-cdef-111213141516
     ```
 
 ## Stats
