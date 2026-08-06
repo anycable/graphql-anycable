@@ -94,22 +94,18 @@ module GraphQL
         [bulk_readable, oversized.map(&:first)]
       end
 
-      # Groups `[key, size]` pairs into chunks of keys whose combined size stays within the batch
-      # size, so that reading a whole chunk at once never materializes more members than iterating
-      # a single collection with a cursor would.
+      # Yields key chunks whose combined size stays within redis_scan_count.
       def each_capped_chunk(sized_keys)
-        chunk = []
-        chunk_size = 0
+        chunk, total = [], 0
 
         sized_keys.each do |key, size|
-          if chunk.any? && (chunk_size + size) > redis_scan_count
+          if chunk.any? && total + size > redis_scan_count
             yield chunk
-            chunk = []
-            chunk_size = 0
+            chunk, total = [], 0
           end
 
           chunk << key
-          chunk_size += size
+          total += size
         end
 
         yield chunk if chunk.any?
