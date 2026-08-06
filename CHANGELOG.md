@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
-- Subscriptions are no longer leaked when a channel carries more than one of them. Each call to `#write_subscription` overwrote the channel's stored id and keyed the channel's set by the new subscription id, so `#delete_channel_subscriptions` could only ever find the most recent subscription: every earlier one survived unsubscribe and lingered until its TTL, leaving its fingerprint set (which has no TTL) behind for the cleanup rake task. The first subscription's id now names the channel and later subscriptions are added to that same set. [@jjb] ([#58](https://github.com/anycable/graphql-anycable/pull/58))
+- Subscriptions are no longer leaked when a channel carries more than one of them. The first subscription's id now names the channel and later subscriptions are added to that same set. On disconnect, the channel's set is read and all subscriptions in it are deleted instead of only the first one as before. [@jjb] ([#58](https://github.com/anycable/graphql-anycable/pull/58))
+
+- Further optimize cleanup tasks with pipelining their reads and removals across keys. [@jjb] ([#57](https://github.com/anycable/graphql-anycable/pull/57))
 
 ## 1.3.2 - 2026-08-05
 
