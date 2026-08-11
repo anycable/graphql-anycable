@@ -229,21 +229,37 @@ module GraphQL
       end
 
       def write_channel_id(channel, val)
-        channel.connection.anycable_socket.istate["sid"] = val
+        channel_istate(channel)["sid"] = val
         channel.instance_variable_set(:@__sid__, val)
       end
 
       def fetch_channel_istate(channel)
-        # For Rails integration
+        # For Rails integration, where the state is already scoped to this channel
         return channel.__istate__ if channel.respond_to?(:__istate__)
 
-        return unless channel.connection.socket.istate
+        istate = channel_istate(channel)
 
-        if channel.connection.socket.istate[channel.identifier]
-          JSON.parse(channel.connection.socket.istate[channel.identifier])
+        return unless istate
+
+        # On disconnect the socket carries every channel's state, keyed by identifier
+        if istate[channel.identifier]
+          JSON.parse(istate[channel.identifier])
         else
-          channel.connection.socket.istate
+          istate
         end
+      end
+
+      # The channel's istate hash. Reads and writes have to resolve it the same way, or
+      # the id written when the channel's first subscription is created cannot be found
+      # again when the next one is. Rails integration exposes it as #__istate__ on the
+      # channel; otherwise it lives on the connection's socket, which anycable-rails
+      # names #anycable_socket and a bare AnyCable connection names #socket.
+      def channel_istate(channel)
+        return channel.__istate__ if channel.respond_to?(:__istate__)
+
+        connection = channel.connection
+        socket = connection.respond_to?(:anycable_socket) ? connection.anycable_socket : connection.socket
+        socket.istate
       end
 
       def redis_key(prefix)

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Fixed
+
+- Resolve the channel's istate the same way for reads and writes, so a connection that exposes only `#socket` (rather than anycable-rails' `#anycable_socket`) can store the channel id that `#write_subscription` now reads back. [@jjb] ([#59](https://github.com/anycable/graphql-anycable/pull/59))
+
 ## 1.3.3 - 2026-08-10
 
 ### Fixed

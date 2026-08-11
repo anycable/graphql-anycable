@@ -35,8 +35,6 @@ class FakeConnection
   attr_reader :request, :socket, :identifiers, :subscriptions,
     :schema
 
-  alias_method :anycable_socket, :socket
-
   def initialize(socket, identifiers: nil, subscriptions: nil)
     @socket = socket
     @identifiers = identifiers ? JSON.parse(identifiers) : {}
