@@ -19,13 +19,17 @@ jobs:
       matrix:
         include:
           - ruby: "4.0"
-            graphql: '~> 2.3'
+            graphql: '~> 2.6'
             anycable: '~> 1.6'
             redis_version: latest
+          - ruby: "3.4"
+            graphql: '~> 2.5.0'
+            anycable: '~> 1.6'
+            redis_version: '7.4'
           - ruby: "3.3"
-            graphql: '~> 2.3'
+            graphql: '~> 2.3.0'
             anycable: '~> 1.5'
-            redis_version: latest
+            redis_version: '7.4'
           - ruby: "3.2"
             graphql: '~> 2.2.0'
             anycable: '~> 1.5.0'
