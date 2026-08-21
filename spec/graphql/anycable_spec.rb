@@ -211,6 +211,58 @@ RSpec.describe GraphQL::AnyCable do
     end
   end
 
+  describe ".delete_subscription" do
+    let(:redis) { $redis }
+
+    before do
+      AnycableSchema.execute(
+        query: query,
+        context: {channel: channel, subscription_id: subscription_id},
+        variables: {},
+        operation_name: "SomeSubscription"
+      )
+    end
+
+    it "removes subscription from redis" do
+      expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be true
+
+      AnycableSchema.subscriptions.delete_subscription(subscription_id)
+
+      aggregate_failures do
+        expect(redis.exists?("graphql-subscription:some-truly-random-number")).to be false
+        expect(redis.keys("graphql-subscriptions:*")).to be_empty
+        expect(redis.keys("graphql-fingerprints:*")).to be_empty
+      end
+    end
+
+    # Bare +AnyCable+ resolves to +GraphQL::AnyCable+ inside the adapter, so the former
+    # default checked a connection out of the pool and then kept using it forever.
+    it "borrows a connection instead of the deprecated global one" do
+      expect(GraphQL::AnyCable).not_to receive(:redis)
+
+      AnycableSchema.subscriptions.delete_subscription(subscription_id)
+    end
+  end
+
+  describe ".read_subscription" do
+    let(:redis) { $redis }
+
+    before do
+      AnycableSchema.execute(
+        query: query,
+        context: {channel: channel, subscription_id: subscription_id},
+        variables: {},
+        operation_name: "SomeSubscription"
+      )
+      redis.del("graphql-subscription:#{subscription_id}")
+    end
+
+    it "raises when the subscription is no longer stored" do
+      expect { AnycableSchema.subscriptions.read_subscription(subscription_id) }
+        .to raise_error(GraphQL::AnyCable::SubscriptionExpiredError, subscription_id)
+    end
+  end
+
   describe "with missing channel instance in execution context" do
     subject do
       AnycableSchema.execute(

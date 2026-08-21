@@ -16,5 +16,9 @@ module GraphQL
         DEFAULT_MESSAGE
       end
     end
+
+    # This error is raised when a subscription is gone from Redis by the time it is read,
+    # so that the caller can tell it from an update GraphQL has deliberately skipped.
+    class SubscriptionExpiredError < ::RuntimeError; end
   end
 end
