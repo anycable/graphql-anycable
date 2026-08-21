@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.3.4 - 2026-08-21
+
 ### Fixed
+
+- Return `nil` from `read_subscription` if subscription data has gone from Redis, That was resulted in a "No query string was present" errors received on graphql subscription clients receiving a hash with an `nil` `query_string` instead of receiving `nil` directly. [@thlacroix] ([#51](https://github.com/anycable/graphql-anycable/pull/51))
 
 - Subscription events are no longer dropped when another subscription with the same fingerprint expires during execution. [@prog-supdex] ([#53](https://github.com/anycable/graphql-anycable/pull/53))
 
@@ -241,6 +245,7 @@ Technical release to test publishing via GitHub Actions.
 
 Initial version: store subscriptions on redis, re-execute queries in sync. [@Envek]
 
+[@thlacroix]: https://github.com/thlacroix "Thomas Lacroix"
 [@jjb]: https://github.com/jjb "John Bachir"
 [@prog-supdex]: https://github.com/prog-supdex "Igor Platonov"
 [@ilyasgaraev]: https://github.com/ilyasgaraev "Ilyas Garaev"
